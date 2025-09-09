@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نظام ختم وتحقق التقارير</title>
+<style>
+body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Kufi Arabic", "Noto Sans Arabic", Arial, "Amiri", sans-serif; background:radial-gradient(1200px 600px at 100% -10%, #dbeafe 0%, transparent 50%), linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); color:#0f172a; padding:20px; line-height:1.6; }
+.container { max-width:900px; margin:0 auto; }
+.header { text-align:center; margin:10px 0 20px; }
+.header h1 { margin:0; font-size:26px; color:#0b1220; }
+.header .subtitle { margin:6px 0 0; color:#475569; font-size:14px; }
+.card { background:#ffffff; padding:20px; border-radius:14px; margin-bottom:18px; box-shadow:0 8px 24px rgba(15,23,42,0.08); border:1px solid rgba(2,6,23,0.06); }
+input[type=file] { padding:10px; margin:6px 0 10px; width:100%; border-radius:10px; border:1px solid #cbd5e1; background:#f8fafc; color:#0f172a; transition:box-shadow .2s ease, border-color .2s ease, background .2s ease; }
+input[type=file]:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 4px rgba(99,102,241,0.15); background:#ffffff; }
+input[type=file]::file-selector-button { margin-inline-end:12px; padding:10px 14px; border:none; border-radius:8px; background:#4f46e5; color:#fff; font-weight:600; cursor:pointer; transition:filter .2s ease, transform .02s ease; }
+input[type=file]::file-selector-button:hover { filter:brightness(0.95); }
+input[type=file]::file-selector-button:active { transform:translateY(1px); }
+.btn { display:inline-flex; align-items:center; justify-content:center; width:100%; padding:12px 14px; border-radius:10px; border:1px solid transparent; background:#4f46e5; color:#fff; font-weight:700; letter-spacing:.2px; cursor:pointer; transition:box-shadow .2s ease, transform .02s ease, filter .2s ease, background .2s ease; text-decoration:none; }
+.btn:hover { filter:brightness(0.98); box-shadow:0 10px 20px rgba(79,70,229,0.18); }
+.btn:active { transform:translateY(1px); }
+.btn:focus-visible { outline:none; box-shadow:0 0 0 4px rgba(99,102,241,0.25); }
+.btn:disabled { cursor:not-allowed; background:#818cf8; opacity:0.85; box-shadow:none; }
+.btn.is-loading { position:relative; }
+.btn.is-loading:before { content:""; width:16px; height:16px; border-radius:999px; border:2px solid rgba(255,255,255,0.55); border-top-color:#fff; animation:btnspin 1s linear infinite; position:absolute; inset-inline-start:12px; top:50%; transform:translateY(-50%); }
+@keyframes btnspin { to { transform:translateY(-50%) rotate(360deg); } }
+#qrBox { margin-top:10px; display:flex; align-items:center; justify-content:center; min-height:160px; background:linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); border:1px dashed #cbd5e1; border-radius:12px; padding:12px; }
+#log { margin-top:8px; font-size:14px; color:#0f172a; }
+#log a { display:inline-block; margin-top:8px; color:#2563eb; text-decoration:none; font-weight:600; }
+#log a:hover { text-decoration:underline; }
+</style>
+<!-- مكتبات -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+if (typeof QRCode === 'undefined') {
+    document.write('<script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"><\/script>');
+}
+</script>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+<div class="header">
+<h1>نظام ختم وتحقق التقارير</h1>
+<p class="subtitle">ارفع ملف PDF ليتم ختمه وتوليد رمز QR.</p>
+</div>
+
+<div class="card">
+<h2>رفع التقرير</h2>
+<input type="file" id="pdfFile" accept="application/pdf">
+<button id="processBtn" class="btn">توليد النسخ وQR</button>
+<div id="log" class="log"></div>
+</div>
+
+<div class="card">
+<h2>QR Code</h2>
+<div id="qrBox"></div>
+</div>
+</div>
+
+<script>
+const $ = s=>document.querySelector(s);
+const log = msg=>{ const d=document.createElement('div'); d.textContent=msg; $('#log').appendChild(d); }
+
+// إعداد خط عربي مضمّن لاستخدامه داخل PDF
+// استخدم مسارًا محليًا مع رابط احتياطي لتفادي تعطل المصدر
+const LOCAL_ARABIC_FONT_URL = '/fonts/Amiri-Regular.ttf';
+const FALLBACK_ARABIC_FONT_URL = 'https://raw.githubusercontent.com/google/fonts/main/ofl/amiri/Amiri-Regular.ttf';
+let cachedArabicFontBytesPromise = null;
+async function getArabicFontBytes(){
+    if(!cachedArabicFontBytesPromise){
+        const tryUrls = [];
+        // في وضع file:// لا يعمل المسار النسبي عبر fetch، لذا استخدم الخادم المحلي عند توفره
+        if (location && (location.protocol !== 'file:' && location.origin !== 'null')) {
+            tryUrls.push(LOCAL_ARABIC_FONT_URL);
+        } else {
+            tryUrls.push('http://localhost:3000' + LOCAL_ARABIC_FONT_URL);
+        }
+        tryUrls.push(FALLBACK_ARABIC_FONT_URL);
+
+        cachedArabicFontBytesPromise = (async () => {
+            let lastErr;
+            for (const url of tryUrls) {
+                try {
+                    const r = await fetch(url);
+                    if(!r.ok) throw new Error('HTTP '+r.status);
+                    const buf = await r.arrayBuffer();
+                    return new Uint8Array(buf);
+                } catch (e) {
+                    lastErr = e;
+                }
+            }
+            throw new Error('تعذر تحميل الخط العربي');
+        })();
+    }
+    return await cachedArabicFontBytesPromise;
+}
+
+// قاعدة عنوان واجهة البرمجة: تدعم الفتح عبر file:// مباشرةً
+const API_BASE = (location && (location.protocol === 'file:' || location.origin === 'null')) ? 'http://localhost:3000' : '';
+
+// جلب إعدادات الخادم (B2)
+let serverConfigPromise = null;
+async function getServerConfig(){
+    if(!serverConfigPromise){
+        serverConfigPromise = (async () => {
+            try {
+                const r = await fetch((API_BASE || '') + '/config');
+                if(!r.ok) throw new Error('config http '+r.status);
+                return await r.json();
+            } catch(_) {
+                return { b2Enabled: false };
+            }
+        })();
+    }
+    return await serverConfigPromise;
+}
+
+// دالة توليد hash مبسط (SHA-256)
+async function generateHash(fileArrayBuffer){
+    const hashBuffer = await crypto.subtle.digest('SHA-256', fileArrayBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// توليد QR
+function renderQR(text){
+    $('#qrBox').innerHTML='';
+    // المحاولة الأولى: مكتبة QRCode إن توفرت
+    if (typeof QRCode !== 'undefined') {
+        new QRCode($('#qrBox'), { text, width:150, height:150 });
+        return;
+    }
+    // المحاولة الثانية: توليد صورة QR من خدمة عامة
+    const img = document.createElement('img');
+    img.width = 150;
+    img.height = 150;
+    img.alt = 'QR';
+    img.onload = () => {
+        // تمت تهيئة الـ QR بنجاح عبر الخدمة
+    };
+    img.onerror = () => {
+        // المحاولة الثالثة: إظهار رابط فقط كحل أخير
+        $('#qrBox').innerHTML = '';
+        const a = document.createElement('a');
+        a.href = text;
+        a.textContent = 'فتح الرابط: ' + text;
+        $('#qrBox').appendChild(a);
+    };
+    img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(text);
+    $('#qrBox').appendChild(img);
+}
+
+// توليد صورة QR كـ DataURL لاستخدامها داخل PDF
+async function generateQRDataUrl(text, size){
+    return await new Promise((resolve, reject)=>{
+        if (typeof QRCode === 'undefined') {
+            return reject(new Error('مكتبة QR غير متوفرة لتوليد الصورة'));
+        }
+        const container = document.createElement('div');
+        container.style.position = 'fixed';
+        container.style.left = '-9999px';
+        document.body.appendChild(container);
+        try {
+            // إنشاء QR داخل عنصر مخفي ثم استخراج الصورة
+            new QRCode(container, { text, width: size, height: size });
+            // امنح المكتبة دورة حدث لتكمل الرسم
+            setTimeout(()=>{
+                try {
+                    let dataUrl;
+                    const img = container.querySelector('img');
+                    const canvas = container.querySelector('canvas');
+                    if (img && img.src) {
+                        dataUrl = img.src;
+                    } else if (canvas) {
+                        dataUrl = canvas.toDataURL('image/png');
+                    }
+                    document.body.removeChild(container);
+                    if (!dataUrl) return reject(new Error('تعذر توليد صورة QR'));
+                    resolve(dataUrl);
+                } catch(err){
+                    document.body.removeChild(container);
+                    reject(err);
+                }
+            }, 0);
+        } catch(err){
+            document.body.removeChild(container);
+            reject(err);
+        }
+    });
+}
+
+// إذا وُجد hash في عنوان الصفحة، اعرض QR فورًا
+(function preRenderFromQuery(){
+    try {
+        const u = new URL(window.location.href);
+        const hash = u.searchParams.get('hash');
+        if (hash) {
+            const qrBase = (API_BASE && API_BASE.length) ? API_BASE : window.location.origin;
+            renderQR(qrBase + '/verify?hash=' + hash);
+        }
+    } catch(_) {}
+})();
+
+// ختم PDF (بصمة ورمز QR)
+async function stampPDF(pdfBytes, hash, qrTextOverride){
+    const pdfDoc = await PDFLib.PDFDocument.load(pdfBytes);
+    const pages = pdfDoc.getPages();
+    pdfDoc.registerFontkit(fontkit);
+    const font = await pdfDoc.embedFont(await getArabicFontBytes(), { subset: true });
+    // نص QR المطلوب تضمينه
+    let qrText = qrTextOverride;
+    if (!qrText) {
+        const qrBase = (API_BASE && API_BASE.length) ? API_BASE : window.location.origin;
+        qrText = qrBase + '/file?hash=' + hash;
+    }
+    const qrDataUrl = await generateQRDataUrl(qrText, 100);
+    let qrImage;
+    if (qrDataUrl.startsWith('data:image/png')) {
+        qrImage = await pdfDoc.embedPng(qrDataUrl);
+    } else {
+        qrImage = await pdfDoc.embedJpg(qrDataUrl);
+    }
+    const qrWidth = 100;
+    const qrHeight = 100;
+    pages.forEach((p, pageIndex)=>{
+        p.drawText('نسخة أصلية للبنك', { x:20, y:20, size:12, font });
+        p.drawText('Hash:'+hash.slice(0,10)+'...', { x:20, y:35, size:8, font });
+        if (pageIndex === 0) {
+            p.drawImage(qrImage, { x: p.getWidth() - qrWidth - 20, y: 20, width: qrWidth, height: qrHeight });
+        }
+    });
+    return await pdfDoc.save();
+}
+
+// رفع الملف المختوم كاملاً إلى الخادم
+async function uploadStamped(blob, originalName, hash, targetName){
+    const form = new FormData();
+    const stampedFile = new File([blob], 'original-'+originalName, { type: 'application/pdf' });
+    form.append('file', stampedFile);
+    form.append('hash', hash);
+    if (targetName) form.append('targetName', targetName);
+    let res;
+    try {
+        res = await fetch((API_BASE || '') + '/upload', { method: 'POST', body: form });
+    } catch (networkErr) {
+        throw new Error('تعذر الاتصال بالخادم. تأكد أن الخادم يعمل على ' + (API_BASE || window.location.origin));
+    }
+    if(!res.ok){
+        let detail = '';
+        try { const j = await res.json(); detail = j && j.message ? ' - ' + j.message : ''; } catch(_) {}
+        throw new Error('رفع غير ناجح' + detail);
+    }
+    return await res.json();
+}
+
+$('#processBtn').addEventListener('click', async ()=>{
+    const fileInput = $('#pdfFile');
+    if(!fileInput.files.length){ alert('اختر ملف PDF'); return; }
+    const file = fileInput.files[0];
+    const arrayBuffer = await file.arrayBuffer();
+    const hash = await generateHash(arrayBuffer);
+    const cfg = await getServerConfig();
+    const targetName = 'original-' + file.name;
+    let qrB2Url = '';
+    if (cfg && cfg.b2Enabled && cfg.b2PublicBaseUrl && cfg.b2BucketName) {
+        // ترميز كل جزء من اسم الملف مع الحفاظ على الشرطة المائلة كفواصل مسارات
+        const safeBucket = encodeURIComponent(cfg.b2BucketName);
+        const safePath = String(targetName).split('/').map(seg => encodeURIComponent(seg)).join('/');
+        qrB2Url = cfg.b2PublicBaseUrl.replace(/\/$/, '') + '/file/' + safeBucket + '/' + safePath;
+    }
+
+    const stampedBytes = await stampPDF(arrayBuffer, hash, qrB2Url || null);
+    const blob = new Blob([stampedBytes], {type:'application/pdf'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'original-'+file.name;
+    a.textContent = 'تحميل النسخة الأصلية للبنك';
+    $('#log').appendChild(a);
+
+    // عرض QR برابط التحقق مؤقتًا قبل الرفع
+    const qrBaseInitial = (API_BASE && API_BASE.length) ? API_BASE : window.location.origin;
+    renderQR(qrBaseInitial + '/verify?hash=' + hash);
+
+    // رفع النسخة الأصلية المختومة كاملةً
+    log('⬆️ جاري رفع النسخة الأصلية إلى الخادم...');
+    try {
+        const result = await uploadStamped(blob, file.name, hash, targetName);
+        log('✅ تم رفع الملف كاملاً: ' + result.fileName);
+        if (result.path) {
+            const view = document.createElement('a');
+            view.href = (API_BASE || '') + result.path;
+            view.target = '_blank';
+            view.textContent = 'عرض الملف المرفوع على الخادم';
+            $('#log').appendChild(document.createElement('br'));
+            $('#log').appendChild(view);
+        }
+        // بعد نجاح الرفع، حدِّث الـ QR ليشير مباشرةً إلى Backblaze إن توفر
+        if (result.fileUrl) {
+            renderQR(result.fileUrl);
+        } else if (qrB2Url) {
+            renderQR(qrB2Url);
+        } else {
+            const qrBase = (API_BASE && API_BASE.length) ? API_BASE : window.location.origin;
+            renderQR(qrBase + '/file?hash=' + hash);
+        }
+    } catch(e){
+        log('❌ فشل رفع الملف: ' + (e && e.message ? e.message : e));
+    }
+
+    // نسخة للعميل بعلامة مائية
+    const clientPdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+    const pages = clientPdfDoc.getPages();
+    clientPdfDoc.registerFontkit(fontkit);
+    const font = await clientPdfDoc.embedFont(await getArabicFontBytes(), { subset: true });
+    // تضمين QR داخل نسخة العميل أيضًا (يفضل رابط B2 إن توفر)
+    const qrBaseClient = (API_BASE && API_BASE.length) ? API_BASE : window.location.origin;
+    const qrTextClient = qrB2Url || (qrBaseClient + '/file?hash=' + hash);
+    const qrDataUrlClient = await generateQRDataUrl(qrTextClient, 90);
+    let qrImageClient;
+    if (qrDataUrlClient.startsWith('data:image/png')) {
+        qrImageClient = await clientPdfDoc.embedPng(qrDataUrlClient);
+    } else {
+        qrImageClient = await clientPdfDoc.embedJpg(qrDataUrlClient);
+    }
+    const qrW = 90;
+    const qrH = 90;
+    pages.forEach((p, pageIndex)=>{
+        p.drawText('نسخة للعميل – غير أصلية', { x:50, y:50, size:20, font, color:PDFLib.rgb(0.8,0.8,0.8), rotate:PDFLib.degrees(45) });
+        if (pageIndex === 0) {
+            p.drawImage(qrImageClient, { x: p.getWidth() - qrW - 20, y: 20, width: qrW, height: qrH });
+        }
+    });
+    const clientBytes = await clientPdfDoc.save();
+    const blobClient = new Blob([clientBytes], {type:'application/pdf'});
+    const a2 = document.createElement('a');
+    a2.href = URL.createObjectURL(blobClient);
+    a2.download = 'client-'+file.name;
+    a2.textContent = 'تحميل نسخة العميل';
+    $('#log').appendChild(document.createElement('br'));
+    $('#log').appendChild(a2);
+
+    log('✅ تم توليد النسخ وQR بنجاح.');
+});
+</script>
+
+</body>
+</html>
