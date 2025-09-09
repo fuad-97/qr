@@ -3,9 +3,19 @@ const multer = require('multer');
 const crypto = require('crypto');
 // Load environment variables from .env if present
 try { require('dotenv').config(); } catch(_) {}
-const B2 = require('backblaze-b2');
-const app = express();
-const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+// إعداد Backblaze B2
+const b2KeyId = process.env.B2_APPLICATION_KEY_ID || process.env.B2_KEY_ID;
+const b2AppKey = process.env.B2_APPLICATION_KEY;
+const b2BucketIdEnv = process.env.B2_BUCKET_ID || '';
+const b2BucketNameEnv = process.env.B2_BUCKET_NAME || '';
+const b2PublicBaseOverride = process.env.B2_PUBLIC_BASE_URL || '';
+
+console.log("🔎 Checking ENV variables at startup:");
+console.log("B2_APPLICATION_KEY_ID:", b2KeyId ? "✅ SET" : "❌ NOT SET");
+console.log("B2_APPLICATION_KEY:", b2AppKey ? "✅ SET" : "❌ NOT SET");
+console.log("B2_BUCKET_NAME:", b2BucketNameEnv ? "✅ SET" : "❌ NOT SET");
+console.log("PORT:", port);
+
 
 // Basic CORS for cross-origin requests
 app.use((req, res, next) => {
@@ -233,3 +243,4 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(port, () => console.log(`Server running at http://localhost:${port}`));
+
