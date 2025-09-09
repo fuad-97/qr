@@ -1,8 +1,14 @@
 const express = require('express');
 const multer = require('multer');
 const crypto = require('crypto');
+const B2 = require('backblaze-b2'); // تأكد أنك مثبت الباكيج
 // Load environment variables from .env if present
 try { require('dotenv').config(); } catch(_) {}
+
+// ✅ تعريف app و port قبل الاستخدام
+const app = express();
+const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+
 // إعداد Backblaze B2
 const b2KeyId = process.env.B2_APPLICATION_KEY_ID || process.env.B2_KEY_ID;
 const b2AppKey = process.env.B2_APPLICATION_KEY;
@@ -15,7 +21,6 @@ console.log("B2_APPLICATION_KEY_ID:", b2KeyId ? "✅ SET" : "❌ NOT SET");
 console.log("B2_APPLICATION_KEY:", b2AppKey ? "✅ SET" : "❌ NOT SET");
 console.log("B2_BUCKET_NAME:", b2BucketNameEnv ? "✅ SET" : "❌ NOT SET");
 console.log("PORT:", port);
-
 
 // Basic CORS for cross-origin requests
 app.use((req, res, next) => {
@@ -177,7 +182,6 @@ app.post('/upload', upload.single('file'), async (req, res) => {
       });
 
       // Build a public B2 URL and ensure proper encoding
-      // Important: Preserve path separators in targetName (encode each segment, not the '/')
       const base = (cfg.publicBaseUrl || '').replace(/\/$/, '');
       const safeBucket = encodeURIComponent(cfg.bucketName);
       const safePath = String(targetName)
@@ -225,7 +229,7 @@ app.get('/file', (req, res) => {
   return res.redirect(302, report.fileUrl);
 });
 
-// معالج أخطاء عام لضمان رسائل واضحة وعدم إرجاع 500 غير مفسرة
+// معالج أخطاء عام
 app.use((err, req, res, next) => {
   try {
     const msg = err && err.message ? err.message : 'خطأ غير متوقع';
@@ -235,6 +239,4 @@ app.use((err, req, res, next) => {
   return res.status(500).json({ ok: false, message: 'حدث خطأ غير متوقع. الرجاء المحاولة لاحقًا.' });
 });
 
-app.listen(port, () => console.log(`Server running at http://localhost:${port}`));
-
-
+app.listen(port, () => console.log(`🚀 Server running at http://localhost:${port}`));
