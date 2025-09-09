@@ -43,14 +43,7 @@ function multerErrorHandler(err, req, res, next){
 }
 app.use(multerErrorHandler);
 
-// إعداد Backblaze B2
-// Render envs expected: B2_ACCOUNT_ID, B2_APPLICATION_KEY, B2_BUCKET_ID, B2_BUCKET_NAME
-// Fallbacks kept for compatibility with older naming
-const b2KeyId = process.env.B2_ACCOUNT_ID || process.env.B2_APPLICATION_KEY_ID || process.env.B2_KEY_ID;
-const b2AppKey = process.env.B2_APPLICATION_KEY || process.env.B2_APP_KEY;
-const b2BucketIdEnv = process.env.B2_BUCKET_ID || '';
-const b2BucketNameEnv = process.env.B2_BUCKET_NAME || '';
-const b2PublicBaseOverride = process.env.B2_PUBLIC_BASE_URL || '';
+
 
 let b2; // instance
 let b2Config = { enabled: false, bucketId: '', bucketName: '', publicBaseUrl: '' };
@@ -243,4 +236,5 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(port, () => console.log(`Server running at http://localhost:${port}`));
+
 
