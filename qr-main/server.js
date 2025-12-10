@@ -4,7 +4,8 @@ const path = require('path');
 const fs = require('fs');
 const AWS = require('aws-sdk');
 const app = express();
-const port = 3000;
+// استخدم منفذ Render أو افتراضي 3000
+const port = process.env.PORT || 3000;
 
 // Basic CORS for cross-origin requests
 app.use((req, res, next) => {
