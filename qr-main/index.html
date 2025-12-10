@@ -3,34 +3,240 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>نظام ختم وتحقق التقارير</title>
+<title>نظام الحماية من التزوير – Anti-Forgery Protection</title>
 <style>
-body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Kufi Arabic", "Noto Sans Arabic", Arial, "Amiri", sans-serif; background:radial-gradient(1200px 600px at 100% -10%, #dbeafe 0%, transparent 50%), linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); color:#0f172a; padding:20px; line-height:1.6; }
-.container { max-width:900px; margin:0 auto; }
-.header { text-align:center; margin:10px 0 20px; }
-.header h1 { margin:0; font-size:26px; color:#0b1220; }
-.header .subtitle { margin:6px 0 0; color:#475569; font-size:14px; }
-.card { background:#ffffff; padding:20px; border-radius:14px; margin-bottom:18px; box-shadow:0 8px 24px rgba(15,23,42,0.08); border:1px solid rgba(2,6,23,0.06); }
-input[type=file] { padding:10px; margin:6px 0 10px; width:100%; border-radius:10px; border:1px solid #cbd5e1; background:#f8fafc; color:#0f172a; transition:box-shadow .2s ease, border-color .2s ease, background .2s ease; }
-input[type=file]:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 4px rgba(99,102,241,0.15); background:#ffffff; }
-input[type=file]::file-selector-button { margin-inline-end:12px; padding:10px 14px; border:none; border-radius:8px; background:#4f46e5; color:#fff; font-weight:600; cursor:pointer; transition:filter .2s ease, transform .02s ease; }
-input[type=file]::file-selector-button:hover { filter:brightness(0.95); }
+:root {
+  --bg: #f5f7fb;
+  --card: #ffffff;
+  --text: #0f172a;
+  --muted: #475569;
+  --primary: #1c3faa;
+  --primary-soft: #dfe6ff;
+  --accent: #0ea5e9;
+  --border: #e5e7eb;
+  --shadow-lg: 0 22px 60px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 12px 30px rgba(15, 23, 42, 0.08);
+  --radius: 16px;
+  --glass: rgba(255,255,255,0.65);
+}
+* { box-sizing:border-box; }
+body {
+  font-family: "Noto Kufi Arabic","SF Pro Display",system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Arabic",Arial,"Amiri",sans-serif;
+  background:
+    radial-gradient(900px 700px at 20% -20%, #e7edff 0%, transparent 55%),
+    radial-gradient(800px 600px at 90% 10%, #e3f3ff 0%, transparent 50%),
+    linear-gradient(180deg, #f7f9fc 0%, #eef2f7 100%);
+  color: var(--text);
+  margin:0;
+  padding:28px;
+  line-height:1.6;
+}
+.page {
+  max-width:1100px;
+  margin:0 auto;
+}
+.topbar {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:var(--glass);
+  backdrop-filter: blur(12px);
+  border:1px solid rgba(255,255,255,0.6);
+  border-radius:20px;
+  padding:14px 18px;
+  box-shadow: var(--shadow-md);
+}
+.brand {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  color:var(--text);
+  font-weight:800;
+  letter-spacing:0.2px;
+}
+.brand-icon {
+  width:38px;
+  height:38px;
+  border-radius:12px;
+  background:linear-gradient(135deg, #1c3faa 0%, #0ea5e9 100%);
+  display:grid;
+  place-items:center;
+  color:#fff;
+  box-shadow:0 12px 30px rgba(12,74,110,0.18);
+}
+.brand-sub { color:var(--muted); font-size:13px; }
+.hero {
+  margin:18px 0 20px;
+  padding:26px;
+  background:linear-gradient(135deg, rgba(28,63,170,0.08), rgba(14,165,233,0.08));
+  border:1px solid rgba(28,63,170,0.12);
+  border-radius:22px;
+  box-shadow: var(--shadow-lg);
+  position:relative;
+  overflow:hidden;
+}
+.hero:before, .hero:after {
+  content:"";
+  position:absolute;
+  width:220px; height:220px;
+  border-radius:50%;
+  background:radial-gradient(circle at center, rgba(255,255,255,0.8), transparent 60%);
+  filter:blur(4px);
+}
+.hero:before { inset-inline-start:-80px; top:-70px; }
+.hero:after { inset-inline-end:-60px; bottom:-100px; }
+.hero-content { position:relative; z-index:1; display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; }
+.hero-text h1 { margin:0 0 8px; font-size:28px; color:#0b1220; letter-spacing:-0.2px; }
+.hero-text p { margin:0; color:var(--muted); font-size:15px; max-width:640px; }
+.hero-badges { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.pill {
+  background:rgba(255,255,255,0.8);
+  border:1px solid rgba(28,63,170,0.12);
+  color:var(--text);
+  padding:8px 12px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+  box-shadow:0 8px 20px rgba(15,23,42,0.06);
+}
+.cards-grid {
+  display:grid;
+  grid-template-columns:1.15fr 0.85fr;
+  gap:16px;
+}
+.card {
+  background:var(--card);
+  padding:18px;
+  border-radius:var(--radius);
+  box-shadow: var(--shadow-md);
+  border:1px solid rgba(255,255,255,0.8);
+  position:relative;
+  overflow:hidden;
+}
+.card:before {
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg, rgba(255,255,255,0.75), rgba(255,255,255,0.45));
+  pointer-events:none;
+}
+.card > * { position:relative; z-index:1; }
+.card h2 { margin:0 0 10px; font-size:18px; color:#0b1220; letter-spacing:-0.1px; }
+.card p { margin:0 0 12px; color:var(--muted); font-size:14px; }
+.upload-box {
+  border:1px dashed #d7dbe5;
+  border-radius:14px;
+  padding:16px;
+  background:linear-gradient(145deg, #f8fbff, #eef2f7);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+}
+input[type=file] {
+  padding:12px;
+  margin:6px 0 12px;
+  width:100%;
+  border-radius:12px;
+  border:1px solid #cbd5e1;
+  background:#f9fbff;
+  color:var(--text);
+  transition:box-shadow .2s ease, border-color .2s ease, background .2s ease, transform .05s ease;
+}
+input[type=file]:hover { border-color:#94a3b8; }
+input[type=file]:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 5px rgba(28,63,170,0.15); background:#fff; transform:translateY(-1px); }
+input[type=file]::file-selector-button {
+  margin-inline-end:12px;
+  padding:10px 14px;
+  border:none;
+  border-radius:10px;
+  background:var(--primary);
+  color:#fff;
+  font-weight:700;
+  cursor:pointer;
+  transition:filter .2s ease, transform .02s ease, box-shadow .2s ease;
+  box-shadow:0 10px 24px rgba(28,63,170,0.25);
+}
+input[type=file]::file-selector-button:hover { filter:brightness(1.02); box-shadow:0 12px 26px rgba(28,63,170,0.3); }
 input[type=file]::file-selector-button:active { transform:translateY(1px); }
-.btn { display:inline-flex; align-items:center; justify-content:center; width:100%; padding:12px 14px; border-radius:10px; border:1px solid transparent; background:#4f46e5; color:#fff; font-weight:700; letter-spacing:.2px; cursor:pointer; transition:box-shadow .2s ease, transform .02s ease, filter .2s ease, background .2s ease; text-decoration:none; }
-.btn:hover { filter:brightness(0.98); box-shadow:0 10px 20px rgba(79,70,229,0.18); }
+.btn {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  padding:13px 14px;
+  border-radius:12px;
+  border:1px solid transparent;
+  background:linear-gradient(135deg, #1c3faa 0%, #0ea5e9 100%);
+  color:#fff;
+  font-weight:800;
+  letter-spacing:.2px;
+  cursor:pointer;
+  transition:box-shadow .2s ease, transform .04s ease, filter .2s ease, background .2s ease;
+  text-decoration:none;
+  box-shadow:0 14px 30px rgba(12,74,110,0.22);
+}
+.btn:hover { filter:brightness(1.02); box-shadow:0 18px 36px rgba(12,74,110,0.26); transform:translateY(-1px); }
 .btn:active { transform:translateY(1px); }
-.btn:focus-visible { outline:none; box-shadow:0 0 0 4px rgba(99,102,241,0.25); }
-.btn:disabled { cursor:not-allowed; background:#818cf8; opacity:0.85; box-shadow:none; }
-.btn.secondary { background:#0ea5e9; border-color:#0ea5e9; }
-.btn.secondary:hover { box-shadow:0 10px 20px rgba(14,165,233,0.18); }
-.btn.secondary:disabled { background:#38bdf8; }
+.btn:focus-visible { outline:none; box-shadow:0 0 0 5px rgba(14,165,233,0.25); }
+.btn:disabled { cursor:not-allowed; background:#9db4f5; opacity:0.9; box-shadow:none; }
+.btn.secondary {
+  background:linear-gradient(135deg, #0ea5e9 0%, #4f46e5 100%);
+  border-color:transparent;
+}
+.btn.secondary:hover { box-shadow:0 16px 32px rgba(14,165,233,0.22); }
 .btn.is-loading { position:relative; }
 .btn.is-loading:before { content:""; width:16px; height:16px; border-radius:999px; border:2px solid rgba(255,255,255,0.55); border-top-color:#fff; animation:btnspin 1s linear infinite; position:absolute; inset-inline-start:12px; top:50%; transform:translateY(-50%); }
 @keyframes btnspin { to { transform:translateY(-50%) rotate(360deg); } }
-#qrBox { margin-top:10px; display:flex; align-items:center; justify-content:center; min-height:160px; background:linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); border:1px dashed #cbd5e1; border-radius:12px; padding:12px; }
-#log { margin-top:8px; font-size:14px; color:#0f172a; }
-#log a { display:inline-block; margin-top:8px; color:#2563eb; text-decoration:none; font-weight:600; }
+.actions { display:flex; gap:10px; flex-wrap:wrap; }
+#qrBox {
+  margin-top:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:200px;
+  background:linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+  border:1px solid #e2e8f0;
+  border-radius:18px;
+  padding:16px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 10px 24px rgba(15,23,42,0.05);
+}
+.qr-label { color:var(--muted); font-size:14px; margin-bottom:6px; display:block; }
+#log {
+  margin-top:10px;
+  font-size:14px;
+  color:var(--text);
+  padding:12px;
+  border-radius:12px;
+  background:#f8fafc;
+  border:1px solid #e5e9f2;
+  min-height:64px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+}
+#log a { display:inline-block; margin-top:8px; color:#0f5ed7; text-decoration:none; font-weight:700; }
 #log a:hover { text-decoration:underline; }
+.supporting {
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:10px;
+  color:var(--muted);
+  font-size:13px;
+}
+.supporting .chip {
+  background:#eef2f7;
+  border-radius:999px;
+  padding:7px 12px;
+  border:1px solid #e5e7eb;
+  font-weight:700;
+  color:#334155;
+}
+@media (max-width:960px){
+  body { padding:20px; }
+  .cards-grid { grid-template-columns:1fr; }
+  .hero-text h1 { font-size:24px; }
+}
+@media (max-width:600px){
+  .topbar { flex-direction:column; align-items:flex-start; gap:6px; }
+  .btn { width:100%; }
+}
 </style>
 <!-- مكتبات -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -44,27 +250,61 @@ if (typeof QRCode === 'undefined') {
 </head>
 <body>
 
-<div class="container">
-<div class="header">
-<h1>نظام ختم وتحقق التقارير</h1>
-<p class="subtitle">ارفع ملف PDF ليتم ختمه وتوليد رمز QR.</p>
-</div>
+<div class="page">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 3l7 3v5.5c0 4.3-2.9 8.2-7 9.5-4.1-1.3-7-5.2-7-9.5V6l7-3z" stroke="white" stroke-width="1.6" fill="none"/>
+          <path d="M9 12l2 2 4-4" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <div>نظام الحماية من التزوير</div>
+        <div class="brand-sub">Anti-Forgery Protection System</div>
+      </div>
+    </div>
+    <a class="btn secondary" href="/reports">التقارير المختومة</a>
+  </div>
 
-<div class="card">
-<a class="btn secondary" href="/reports">عرض التقارير المختومة</a>
-</div>
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-text">
+        <h1>خدمة رسمية للبنوك والجهات الحكومية</h1>
+        <p>منصة ختم وتقارير برمز QR موثوق لضمان أصالة المستندات والتحقق الفوري.</p>
+        <div class="hero-badges">
+          <span class="pill">طبقة حماية متعددة</span>
+          <span class="pill">توقيع بصمة وQR</span>
+          <span class="pill">واجهات آمنة</span>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<div class="card">
-<h2>رفع التقرير</h2>
-<input type="file" id="pdfFile" accept="application/pdf">
-<button id="processBtn" class="btn">توليد النسخ وQR</button>
-<div id="log" class="log"></div>
-</div>
+  <div class="cards-grid">
+    <div class="card">
+      <h2>رفع التقرير</h2>
+      <p>اختر ملف PDF ليتم ختمه رقمياً وتوليد رمز تحقق آمن.</p>
+      <div class="upload-box">
+        <input type="file" id="pdfFile" accept="application/pdf">
+      </div>
+      <div class="actions" style="margin-top:10px;">
+        <button id="processBtn" class="btn">توليد النسخ وQR</button>
+      </div>
+      <div class="supporting">
+        <span class="chip">تشفير بصمة SHA-256</span>
+        <span class="chip">توقيع نسخة البنك</span>
+        <span class="chip">نسخة عميل بعلامة مائية</span>
+      </div>
+      <div id="log" class="log"></div>
+    </div>
 
-<div class="card">
-<h2>QR Code</h2>
-<div id="qrBox"></div>
-</div>
+    <div class="card">
+      <h2>QR Code</h2>
+      <span class="qr-label">رابط التحقق الآمن</span>
+      <div id="qrBox"></div>
+    </div>
+  </div>
 </div>
 
 <script>
