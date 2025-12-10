@@ -332,6 +332,12 @@
       margin-top: 14px;
     }
 
+    .actions-row.dual {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
     .btn-primary {
       width: 100%;
       padding: 13px 14px;
@@ -369,6 +375,18 @@
       align-items: center;
       justify-content: center;
       font-size: 11px;
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #0f172a;
+      border: 1px solid #e5e7eb;
+    }
+
+    .btn-secondary:hover {
+      background: #e5e7eb;
+      box-shadow: none;
+      transform: translateY(0);
     }
 
     /* اللوج / الروابط */
@@ -552,6 +570,10 @@
             <span class="btn-primary-icon">➜</span>
             <span>توليد النسخة المختومة و رمز التحقق (QR)</span>
           </button>
+          <a id="downloadBtn" class="btn-primary btn-secondary" href="#" download style="display:none;">
+            <span class="btn-primary-icon">⬇️</span>
+            <span>تنزيل النسخة المختومة</span>
+          </a>
         </div>
 
         <div id="log"></div>
@@ -595,6 +617,7 @@
     const fileInput = document.getElementById("pdfFile");
     const processBtn = document.getElementById("processBtn");
     const qrBox = document.getElementById("qrBox");
+    const downloadBtn = document.getElementById("downloadBtn");
 
     const log = (msg) => {
       const d = document.createElement("div");
@@ -652,9 +675,19 @@
         }
         log("✅ تم رفع الملف وتسجيله بنجاح.");
 
-        const verifyUrl = `${window.location.origin}/verify?hash=${hashHex}`;
-        renderQr(verifyUrl);
-        log(`🔗 رابط التحقق: ${verifyUrl}`);
+        // QR يوجّه مباشرة إلى الملف المختوم
+        const fileUrl = `${window.location.origin}/file?hash=${hashHex}`;
+        renderQr(fileUrl);
+        log(`🔗 رابط الملف المختوم: ${fileUrl}`);
+
+        // إتاحة تنزيل النسخة المخزّنة (من R2 أو التخزين المحلي حسب استجابة الخادم)
+        if (data.r2Url) {
+          downloadBtn.href = data.r2Url;
+          downloadBtn.setAttribute("download", file.name || "stamped.pdf");
+          downloadBtn.style.display = "inline-flex";
+        } else {
+          downloadBtn.style.display = "none";
+        }
       } catch (err) {
         console.error(err);
         log(`❌ ${err.message || "تعذر إكمال العملية"}`);
