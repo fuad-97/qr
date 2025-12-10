@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const crypto = require('crypto');
+const path = require('path');
 // Load environment variables from .env if present
 try { require('dotenv').config(); } catch(_) {}
 const B2 = require('backblaze-b2');
@@ -110,8 +111,13 @@ async function ensureB2Ready(){
 
 // قاعدة بيانات مؤقتة: ربط hash باسم الملف المرفوع
 const reports = {
-  "123abc": { fileName: "report1.pdf", status: "أصلي" }
+  "123abc": { fileName: "report1.pdf", status: "أصلي", createdAt: new Date().toISOString() }
 };
+
+// صفحة عرض جميع التقارير المختومة
+app.get('/reports', (req, res) => {
+  res.sendFile(path.join(__dirname, 'reports.html'));
+});
 
 // مسار التحقق
 app.get('/verify', (req, res) => {
@@ -188,7 +194,8 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         fileName: targetName,
         status: 'أصلي',
         fileUrl,
-        mimeType
+        mimeType,
+        createdAt: new Date().toISOString()
       };
 
       return res.json({ ok: true, hash, fileName: targetName, fileUrl, mimeType, size: req.file.size || undefined });
@@ -223,6 +230,23 @@ app.get('/file', (req, res) => {
 });
 
 // معالج أخطاء عام لضمان رسائل واضحة وعدم إرجاع 500 غير مفسرة
+app.get('/api/reports', (req, res) => {
+  const list = Object.entries(reports).map(([hash, data]) => ({
+    hash,
+    fileName: data.fileName || '',
+    status: data.status || '',
+    fileUrl: data.fileUrl || '',
+    mimeType: data.mimeType || '',
+    createdAt: data.createdAt || null
+  }));
+  list.sort((a, b) => {
+    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return bTime - aTime;
+  });
+  return res.json({ ok: true, reports: list });
+});
+
 app.use((err, req, res, next) => {
   try {
     const msg = err && err.message ? err.message : 'خطأ غير متوقع';
