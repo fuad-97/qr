@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>التقارير المختومة</title>
+<style>
+body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Kufi Arabic", "Noto Sans Arabic", Arial, "Amiri", sans-serif; background:radial-gradient(1200px 600px at 100% -10%, #dbeafe 0%, transparent 50%), linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); color:#0f172a; padding:20px; line-height:1.6; }
+.container { max-width:1000px; margin:0 auto; }
+.header { margin:10px 0 16px; }
+.header h1 { margin:0; font-size:26px; color:#0b1220; }
+.header .subtitle { margin:6px 0 12px; color:#475569; font-size:14px; }
+.header-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.card { background:#ffffff; padding:18px; border-radius:14px; margin-bottom:16px; box-shadow:0 8px 24px rgba(15,23,42,0.08); border:1px solid rgba(2,6,23,0.06); }
+.label { display:block; margin-bottom:8px; font-weight:700; color:#0f172a; font-size:14px; }
+input[type=search] { width:100%; padding:12px; border-radius:10px; border:1px solid #cbd5e1; background:#f8fafc; color:#0f172a; transition:box-shadow .2s ease, border-color .2s ease, background .2s ease; }
+input[type=search]:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 4px rgba(99,102,241,0.15); background:#ffffff; }
+.meta-row { margin-top:10px; color:#475569; font-size:14px; }
+.btn { display:inline-flex; align-items:center; justify-content:center; padding:12px 14px; border-radius:10px; border:1px solid transparent; background:#4f46e5; color:#fff; font-weight:700; letter-spacing:.2px; cursor:pointer; transition:box-shadow .2s ease, transform .02s ease, filter .2s ease, background .2s ease; text-decoration:none; }
+.btn:hover { filter:brightness(0.98); box-shadow:0 10px 20px rgba(79,70,229,0.18); }
+.btn:active { transform:translateY(1px); }
+.btn:focus-visible { outline:none; box-shadow:0 0 0 4px rgba(99,102,241,0.25); }
+.btn:disabled { cursor:not-allowed; background:#818cf8; opacity:0.85; box-shadow:none; }
+.btn.secondary { background:#0ea5e9; border-color:#0ea5e9; color:#fff; }
+.btn.secondary:hover { box-shadow:0 10px 20px rgba(14,165,233,0.18); }
+.btn.secondary:disabled { background:#38bdf8; }
+.status { color:#475569; font-size:14px; margin-bottom:10px; }
+.reports-list { display:flex; flex-direction:column; gap:12px; }
+.report-card { border:1px solid #e2e8f0; border-radius:12px; padding:14px; background:#f8fafc; }
+.report-head { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center; }
+.report-name { font-weight:700; color:#0b1220; }
+.report-badges { display:flex; gap:8px; flex-wrap:wrap; }
+.badge { background:#e0f2fe; color:#0369a1; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:700; }
+.report-meta { margin-top:6px; color:#475569; font-size:14px; }
+.report-meta code { background:#e2e8f0; padding:3px 6px; border-radius:6px; font-size:12px; direction:ltr; unicode-bidi:bidi-override; }
+.label-text { color:#0f172a; font-weight:700; margin-inline-end:6px; }
+.report-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+.mini-btn { display:inline-flex; align-items:center; gap:6px; padding:10px 12px; border-radius:10px; border:1px solid #4f46e5; color:#4f46e5; background:#fff; font-weight:700; text-decoration:none; transition:all .2s ease; }
+.mini-btn:hover { background:#eef2ff; }
+.mini-btn.ghost { border-color:#cbd5e1; color:#0f172a; }
+@media (max-width:640px){ .header h1{font-size:22px;} .header-actions{flex-direction:column;} .mini-btn{width:100%; justify-content:center;} }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>التقارير المختومة</h1>
+    <p class="subtitle">كل التقارير التي تم ختمها مع إمكانية البحث برقم التقرير.</p>
+    <div class="header-actions">
+      <a class="btn" href="/">العودة للصفحة الرئيسية</a>
+      <button class="btn secondary" id="refreshBtn">تحديث القائمة</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label class="label" for="searchInput">ابحث برقم التقرير أو اسم الملف</label>
+    <input type="search" id="searchInput" placeholder="مثال: رقم التقرير أو جزء من الاسم">
+    <div class="meta-row">إجمالي التقارير: <strong id="totalCount">0</strong></div>
+  </div>
+
+  <div class="card">
+    <div id="statusMessage" class="status"></div>
+    <div id="reportsList" class="reports-list"></div>
+  </div>
+</div>
+
+<script>
+const API_BASE = (location && (location.protocol === 'file:' || location.origin === 'null')) ? 'http://localhost:3000' : '';
+const reportsListEl = document.getElementById('reportsList');
+const statusEl = document.getElementById('statusMessage');
+const totalCountEl = document.getElementById('totalCount');
+const searchInput = document.getElementById('searchInput');
+const refreshBtn = document.getElementById('refreshBtn');
+let allReports = [];
+
+function formatDate(value){
+  if (!value) return 'غير متوفر';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return 'غير متوفر';
+  try {
+    return new Intl.DateTimeFormat('ar', { dateStyle:'medium', timeStyle:'short' }).format(d);
+  } catch(_) {
+    return d.toLocaleString();
+  }
+}
+
+function render(list){
+  reportsListEl.innerHTML = '';
+  totalCountEl.textContent = list.length;
+  if(!list.length){
+    statusEl.textContent = 'لا توجد تقارير مختومة مطابقة.';
+    return;
+  }
+  statusEl.textContent = '';
+  list.forEach(report => {
+    const card = document.createElement('div');
+    card.className = 'report-card';
+    const viewUrl = report.fileUrl || ((API_BASE || '') + '/verify?hash=' + encodeURIComponent(report.hash));
+    const verifyUrl = (API_BASE || '') + '/verify?hash=' + encodeURIComponent(report.hash);
+    card.innerHTML = `
+      <div class="report-head">
+        <div class="report-name">${report.fileName || 'ملف بدون اسم'}</div>
+        <div class="report-badges">
+          <span class="badge">${report.status || 'أصلي'}</span>
+        </div>
+      </div>
+      <div class="report-meta"><span class="label-text">رقم التقرير:</span> <code>${report.hash}</code></div>
+      <div class="report-meta"><span class="label-text">تاريخ الختم:</span> ${formatDate(report.createdAt)}</div>
+      <div class="report-actions">
+        <a class="mini-btn" href="${viewUrl}" target="_blank">عرض التقرير</a>
+        <a class="mini-btn ghost" href="${verifyUrl}" target="_blank">رابط التحقق</a>
+      </div>
+    `;
+    reportsListEl.appendChild(card);
+  });
+}
+
+async function loadReports(){
+  statusEl.textContent = '...جاري تحميل التقارير';
+  reportsListEl.innerHTML = '';
+  try {
+    const res = await fetch((API_BASE || '') + '/api/reports');
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    allReports = Array.isArray(data.reports) ? data.reports : [];
+    render(allReports);
+  } catch (err) {
+    statusEl.textContent = 'تعذر تحميل التقارير، حاول مجدداً.';
+    totalCountEl.textContent = '0';
+  }
+}
+
+function applyFilter(){
+  const term = searchInput.value.trim().toLowerCase();
+  if(!term){
+    render(allReports);
+    return;
+  }
+  const filtered = allReports.filter(r => {
+    const h = (r.hash || '').toLowerCase();
+    const name = (r.fileName || '').toLowerCase();
+    return h.includes(term) || name.includes(term);
+  });
+  render(filtered);
+}
+
+searchInput.addEventListener('input', applyFilter);
+refreshBtn.addEventListener('click', loadReports);
+loadReports();
+</script>
+
+</body>
+</html>
