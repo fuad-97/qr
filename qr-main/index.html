@@ -589,18 +589,80 @@
        - log
   -->
   <script>
-    // مثال بسيط جداً فقط كي لا تبقى الصفحة فارغة بدون أي شيء:
-    // استبدله بالكامل بسكربت الختم/التوقيع الذي تستخدمه الآن.
+    // سكربت لتوليد الهاش، رفع الملف للخادم، وإنشاء QR لواجهة التحقق
     const $ = (s) => document.querySelector(s);
     const logDiv = document.getElementById("log");
-    function log(msg) {
+    const fileInput = document.getElementById("pdfFile");
+    const processBtn = document.getElementById("processBtn");
+    const qrBox = document.getElementById("qrBox");
+
+    const log = (msg) => {
       const d = document.createElement("div");
       d.textContent = msg;
       logDiv.appendChild(d);
-    }
+    };
 
-    // هذه فقط رسالة تجريبية – امسحها عند لصق سكربتك الفعلي
-    log("");
+    const toHex = (buffer) =>
+      Array.from(new Uint8Array(buffer))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+
+    const setLoading = (state) => {
+      processBtn.disabled = state;
+      processBtn.style.opacity = state ? "0.7" : "1";
+      processBtn.style.cursor = state ? "not-allowed" : "pointer";
+    };
+
+    const renderQr = (text) => {
+      qrBox.innerHTML = "";
+      new QRCode(qrBox, {
+        text,
+        width: 180,
+        height: 180,
+        correctLevel: QRCode.CorrectLevel.H,
+      });
+    };
+
+    processBtn.addEventListener("click", async () => {
+      try {
+        const file = fileInput.files[0];
+        if (!file) {
+          log("⚠️ اختر ملف PDF أولاً.");
+          return;
+        }
+
+        setLoading(true);
+        log("⏳ يتم حساب البصمة الرقمية للملف...");
+        const hashBuffer = await crypto.subtle.digest(
+          "SHA-256",
+          await file.arrayBuffer()
+        );
+        const hashHex = toHex(hashBuffer);
+        log(`✅ تم حساب الهاش: ${hashHex.slice(0, 12)}...`);
+
+        const form = new FormData();
+        form.append("file", file, file.name);
+        form.append("hash", hashHex);
+
+        log("⏳ رفع الملف للخادم...");
+        const res = await fetch("/upload", { method: "POST", body: form });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          throw new Error(data.message || "حدث خطأ أثناء الرفع");
+        }
+        log("✅ تم رفع الملف وتسجيله بنجاح.");
+
+        const verifyUrl = `${window.location.origin}/verify?hash=${hashHex}`;
+        renderQr(verifyUrl);
+        log(`🔗 رابط التحقق: ${verifyUrl}`);
+      } catch (err) {
+        console.error(err);
+        log(`❌ ${err.message || "تعذر إكمال العملية"}`);
+      } finally {
+        setLoading(false);
+      }
+    });
+  
   </script>
 </body>
 </html>
