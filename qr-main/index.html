@@ -397,7 +397,6 @@ if (typeof QRCode === 'undefined') {
         <div class="hero-pills">
           <span class="hero-pill">بصمة رقمية لا يمكن التلاعب بها</span>
           <span class="hero-pill">تكامل مع أنظمة البنوك والجهات الحكومية</span>
-          <span class="hero-pill">واجهة بسيطة تشبه تطبيقات Apple</span>
         </div>
       </div>
     </div>
@@ -593,8 +592,15 @@ async function stampPDF(pdfBytes, hash, qrTextOverride){
     pages.forEach((p, pageIndex)=>{
         p.drawText('نسخة أصلية للبنك', { x:20, y:20, size:12, font });
         p.drawText('Hash:'+hash.slice(0,10)+'...', { x:20, y:35, size:8, font });
-        if (pageIndex === 0) {
-            p.drawImage(qrImage, { x: p.getWidth() - qrWidth - 20, y: 20, width: qrWidth, height: qrHeight });
+       if (pageIndex === 0) {
+    p.drawImage(qrImageClient, {
+        x: p.getWidth() - qrW - 20,                  // من اليمين
+        y: p.getHeight() - qrH - 20,                 // من الأعلى
+        width: qrW,
+        height: qrH
+    });
+}
+
         }
     });
     return await pdfDoc.save();
@@ -712,3 +718,4 @@ document.getElementById('processBtn').addEventListener('click', async ()=>{
 
 </body>
 </html>
+
