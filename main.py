@@ -71,13 +71,13 @@ def _overlay_qr_on_pdf(input_pdf: Path, output_pdf: Path, qr_png_path: Path, qr_
             for page in document:
                 rect = _calculate_qr_rect(page.rect, qr_size_pt, qr_size_pt)
                 page.insert_image(rect, filename=str(qr_png_path), overlay=True, keep_proportion=True)
-                label_margin = 10.0
+                label_padding = max(12.0, min(18.0, qr_size_pt * 0.15))
                 label_height = 12.0
                 label_rect = fitz.Rect(
                     rect.x0,
-                    rect.y1 + label_margin,
+                    rect.y1 + label_padding,
                     rect.x1,
-                    rect.y1 + label_margin + label_height
+                    rect.y1 + label_padding + label_height
                 )
                 if label_rect.y1 <= page.rect.height:
                     page.insert_textbox(

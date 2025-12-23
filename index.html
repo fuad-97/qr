@@ -639,6 +639,7 @@ async function stampPDF(pdfBytes, hash, qrTextOverride){
     const qrW = 100, qrH = 100;
     const qrLabel = "To Verify";
     const qrLabelSize = 10;
+    const labelPadding = 14; // vertical gap between QR and label in PDF points
 
     pages.forEach((p, i)=>{
         p.drawText("نسخة أصلية للبنك", { x:20, y:20, size:12, font });
@@ -652,7 +653,7 @@ async function stampPDF(pdfBytes, hash, qrTextOverride){
 
             const labelWidth = font.widthOfTextAtSize(qrLabel, qrLabelSize);
             const labelX = qrX + (qrW - labelWidth) / 2;
-            const labelY = qrY - qrLabelSize - 14; // place clearly below the QR
+            const labelY = qrY - labelPadding - qrLabelSize;
             p.drawText(qrLabel, { x: labelX, y: labelY, size: qrLabelSize, font });
         }
     });
@@ -737,6 +738,7 @@ document.getElementById("processBtn").addEventListener("click", async ()=>{
         const qrW=90, qrH=90;
         const qrLabelClient="To Verify";
         const qrLabelSizeClient=9;
+        const labelPaddingClient=14;
 
         pages.forEach((p,i)=>{
             p.drawText("???? ?????? ? ??? ?????",{
@@ -751,12 +753,12 @@ document.getElementById("processBtn").addEventListener("click", async ()=>{
 
                 p.drawImage(qrImageClient,{ x:qrX, y:qrY, width:qrW, height:qrH });
 
-            const labelWidth=font.widthOfTextAtSize(qrLabelClient, qrLabelSizeClient);
-            const labelX=qrX+(qrW-labelWidth)/2;
-            const labelY=qrY-qrLabelSizeClient-14; // place clearly below the QR
-            p.drawText(qrLabelClient,{ x:labelX, y:labelY, size:qrLabelSizeClient, font });
-        }
-    });
+                const labelWidth=font.widthOfTextAtSize(qrLabelClient, qrLabelSizeClient);
+                const labelX=qrX+(qrW-labelWidth)/2;
+                const labelY=qrY-labelPaddingClient-qrLabelSizeClient;
+                p.drawText(qrLabelClient,{ x:labelX, y:labelY, size:qrLabelSizeClient, font });
+            }
+        });
 
         const clientBytes=await clientPdf.save();
         const blobClient=new Blob([clientBytes],{type:"application/pdf"});
