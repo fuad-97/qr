@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نظام الحماية من التزوير – Anti-Forgery Protection</title>
+
+<style>
+:root {
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --surface-soft: #f9fafb;
+  --border-subtle: #e5e5ea;
+  --border-strong: #d0d3dc;
+  --text: #111827;
+  --text-muted: #6b7280;
+  --primary: #2563eb;
+  --primary-soft: #e0ecff;
+  --radius-xl: 28px;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --shadow-soft: 0 18px 40px rgba(15,23,42,0.06);
+  --shadow-floating: 0 30px 80px rgba(15,23,42,0.08);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 24px;
+  background:
+    radial-gradient(900px 600px at 10% -10%, #e5ebff 0%, transparent 55%),
+    radial-gradient(900px 700px at 90% 110%, #e8f5ff 0%, transparent 55%),
+    linear-gradient(180deg, #f5f5f7 0%, #f1f5f9 100%);
+  font-family: system-ui, -apple-system, "SF Pro Text", "Noto Kufi Arabic", sans-serif;
+  color: var(--text);
+}
+
+/* Shell */
+.shell {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+/* Top bar */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 20% 20%, #ffffff 0, transparent 45%),
+    linear-gradient(135deg, #1f3e72, #2563eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 18px 40px rgba(37,99,235,0.35);
+  color: #fff;
+}
+
+.brand-text-main {
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.brand-text-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Ghost button */
+.ghost-link {
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(12px);
+  font-size: 13px;
+  color: var(--text);
+  text-decoration: none;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  transition: 0.15s ease;
+}
+
+.ghost-link:hover {
+  border-color: var(--border-strong);
+  background: #ffffff;
+}
+
+/* Hero */
+.hero {
+  padding: 26px 26px 22px;
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(480px 260px at 0% 0%, #e0e7ff 0%, transparent 55%),
+    radial-gradient(540px 260px at 100% 0%, #dbeafe 0%, transparent 55%),
+    linear-gradient(160deg, #ffffff 0%, #f3f4f6 100%);
+  border: 1px solid rgba(255,255,255,0.9);
+  box-shadow: var(--shadow-floating);
+  margin-bottom: 22px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-inner {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: flex-start;
+  z-index: 1;
+}
+
+.hero-title {
+  margin: 0 0 8px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.hero-sub {
+  margin: 0 0 14px;
+  font-size: 14px;
+  color: var(--text-muted);
+  max-width: 520px;
+}
+
+.hero-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hero-pill {
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.45);
+  background: rgba(255,255,255,0.8);
+  font-size: 11px;
+  color: #374151;
+}
+
+/* Main panel */
+.main-panel {
+  background: rgba(255,255,255,0.8);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255,255,255,0.9);
+  box-shadow: var(--shadow-soft);
+  padding: 22px;
+}
+
+/* Grid */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0,1.2fr) minmax(0,0.9fr);
+  gap: 18px;
+}
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 10px 30px rgba(15,23,42,0.04);
+  padding: 18px 18px 16px;
+}
+
+.card-header {
+  margin-bottom: 8px;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.card-sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Upload box */
+.upload-box {
+  margin-top: 12px;
+  border-radius: var(--radius-md);
+  border: 1px dashed #d4d7e2;
+  background: var(--surface-soft);
+  padding: 14px;
+}
+
+.upload-label-main {
+  font-size: 13px;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.upload-label-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+input[type=file] {
+  margin-top: 10px;
+  display: block;
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  font-size: 13px;
+  transition: 0.18s ease;
+}
+
+input[type=file]:hover {
+  border-color: #9ca3af;
+}
+
+input[type=file]:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.22);
+  background: #ffffff;
+}
+
+input[type=file]::file-selector-button {
+  margin-inline-end: 10px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: none;
+  background: #111827;
+  color: #f9fafb;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Primary button */
+.primary-btn {
+  margin-top: 14px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 999px;
+  border: none;
+  background:
+    radial-gradient(circle at 0 0, #ffffff 0, transparent 55%),
+    linear-gradient(135deg, #111827, #1f2937);
+  color: #f9fafb;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 18px 40px rgba(15,23,42,0.3);
+  transition: 0.18s ease;
+}
+
+.primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 22px 48px rgba(15,23,42,0.35);
+}
+
+.primary-btn:active {
+  transform: translateY(0);
+}
+
+/* Log box */
+#log {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: #f9fafb;
+  border: 1px solid var(--border-subtle);
+  font-size: 13px;
+  min-height: 70px;
+}
+
+#log a {
+  display: inline-block;
+  margin-top: 6px;
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* QR card */
+.qr-wrapper {
+  margin-top: 10px;
+}
+
+.qr-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+#qrBox {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: radial-gradient(circle at 10% 0%, #f9fafb 0, #e5e7eb 60%, #f9fafb 100%);
+  min-height: 210px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    0 16px 36px rgba(15,23,42,0.08);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  body {
+    padding: 18px;
+  }
+  .grid {
+    grid-template-columns: minmax(0,1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .hero-title {
+    font-size: 22px;
+  }
+}
+</style>
+
+<!-- مكتبات -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+if (typeof QRCode === 'undefined') {
+    document.write('<script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"><\/script>');
+}
+</script>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="brand-block">
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3l7 3v5.5c0 4.3-2.9 8.2-7 9.5-4.1-1.3-7-5.2-7-9.5V6l7-3z"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-text-main">نظام الحماية من التزوير</div>
+        <div class="brand-text-sub">Anti-Forgery Protection System</div>
+      </div>
+    </div>
+
+    <a class="ghost-link" href="/reports">
+      التقارير المختومة
+      <span style="font-size:11px;">↗</span>
+    </a>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div>
+        <h1 class="hero-title">ختم تقاريرك ببصمة رقمية ورمز تحقق واحد.</h1>
+        <p class="hero-sub">
+          ارفع تقرير التثمين النهائي بصيغة PDF،
+          ودع النظام يتكفل بتوليد بصمة SHA-256،
+          ختم النسخة الأصلية للبنك،
+          وربطها برمز QR للتحقق الفوري.
+        </p>
+        <div class="hero-pills">
+          <span class="hero-pill">بصمة رقمية لا يمكن التلاعب بها</span>
+          <span class="hero-pill">تكامل مع أنظمة البنوك والجهات الحكومية</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main content -->
+  <main class="main-panel">
+    <div class="grid">
+      <!-- Left: Upload / Actions -->
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">رفع تقرير PDF</h2>
+          <p class="card-sub">اختر ملف التقرير النهائي وسيتم ختمه رقمياً وتوليد رمز QR للتحقق.</p>
+        </div>
+
+        <div class="upload-box">
+          <div class="upload-label-main">ملف التقرير</div>
+          <div class="upload-label-sub">يدعم فقط ملفات PDF النهائية المخصصة للإرسال للبنك.</div>
+          <input type="file" id="pdfFile" accept="application/pdf">
+        </div>
+
+        <button id="processBtn" class="primary-btn">
+          <span>توليد النسخ ورمز QR</span>
+        </button>
+
+        <div id="log"></div>
+      </section>
+
+      <!-- Right: QR -->
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">رمز التحقق (QR)</h2>
+          <p class="card-sub">يمكن للجهات المانحة أو البنوك مسح هذا الرمز للتحقق من أصالة التقرير.</p>
+        </div>
+
+        <div class="qr-wrapper">
+          <div class="qr-label">سيظهر رمز QR هنا بعد رفع ومعالجة التقرير.</div>
+          <div id="qrBox">
+            <span style="font-size:13px; color:#9ca3af;">لم يتم توليد رمز بعد.</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+const $ = s=>document.querySelector(s);
+const log = msg=>{ const d=document.createElement('div'); d.textContent=msg; $('#log').appendChild(d); }
+
+// إعداد خط عربي
+const LOCAL_ARABIC_FONT_URL = '/fonts/Amiri-Regular.ttf';
+const FALLBACK_ARABIC_FONT_URL = 'https://raw.githubusercontent.com/google/fonts/main/ofl/amiri/Amiri-Regular.ttf';
+let cachedArabicFontBytesPromise = null;
+
+async function getArabicFontBytes(){
+    if(!cachedArabicFontBytesPromise){
+        const tryUrls = [];
+        if (location && (location.protocol !== 'file:' && location.origin !== 'null')) {
+            tryUrls.push(LOCAL_ARABIC_FONT_URL);
+        } else {
+            tryUrls.push('http://localhost:3000' + LOCAL_ARABIC_FONT_URL);
+        }
+        tryUrls.push(FALLBACK_ARABIC_FONT_URL);
+
+        cachedArabicFontBytesPromise = (async () => {
+            let lastErr;
+            for (const url of tryUrls) {
+                try {
+                    const r = await fetch(url);
+                    if(!r.ok) throw new Error('HTTP '+r.status);
+                    const buf = await r.arrayBuffer();
+                    return new Uint8Array(buf);
+                } catch (e) { lastErr = e; }
+            }
+            throw new Error('تعذر تحميل الخط العربي');
+        })();
+    }
+    return await cachedArabicFontBytesPromise;
+}
+
+const API_BASE = (location && (location.protocol === 'file:' || location.origin === 'null'))
+  ? 'http://localhost:3000'
+  : '';
+
+// جلب الإعدادات
+let serverConfigPromise = null;
+async function getServerConfig(){
+    if(!serverConfigPromise){
+        serverConfigPromise = (async () => {
+            try {
+                const r = await fetch((API_BASE || '') + '/config');
+                if(!r.ok) throw new Error();
+                return await r.json();
+            } catch { return { b2Enabled: false }; }
+        })();
+    }
+    return await serverConfigPromise;
+}
+
+// SHA256
+async function generateHash(fileArrayBuffer){
+    const hashBuffer = await crypto.subtle.digest('SHA-256', fileArrayBuffer);
+    return Array.from(new Uint8Array(hashBuffer))
+      .map(b=>b.toString(16).padStart(2,'0'))
+      .join('');
+}
+
+// توليد QR في الواجهة
+function renderQR(text){
+    $('#qrBox').innerHTML='';
+    if (typeof QRCode !== 'undefined') {
+        new QRCode($('#qrBox'), { text, width:150, height:150 });
+        return;
+    }
+    const img = document.createElement('img');
+    img.width = 150;
+    img.height = 150;
+    img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(text);
+    $('#qrBox').appendChild(img);
+}
+
+// صورة QR داخل PDF
+async function generateQRDataUrl(text, size){
+    return await new Promise((resolve, reject)=>{
+        if (typeof QRCode === 'undefined') return reject();
+
+        const holder = document.createElement('div');
+        holder.style.position = "fixed";
+        holder.style.left = "-9999px";
+        document.body.appendChild(holder);
+
+        new QRCode(holder, { text, width:size, height:size });
+
+        setTimeout(()=>{
+            try {
+                const img = holder.querySelector("img");
+                const canvas = holder.querySelector("canvas");
+                let dataUrl = img?.src || canvas?.toDataURL("image/png");
+                document.body.removeChild(holder);
+                if(!dataUrl) return reject();
+                resolve(dataUrl);
+            } catch(e){
+                document.body.removeChild(holder);
+                reject(e);
+            }
+        },0);
+    });
+}
+
+// ختم PDF
+async function stampPDF(pdfBytes, hash, qrTextOverride){
+    const pdfDoc = await PDFLib.PDFDocument.load(pdfBytes);
+    const pages = pdfDoc.getPages();
+    pdfDoc.registerFontkit(fontkit);
+    const font = await pdfDoc.embedFont(await getArabicFontBytes(), { subset:true });
+
+    let qrText = qrTextOverride ||
+      ((API_BASE || window.location.origin) + '/file?hash=' + hash);
+
+    const qrDataUrl = await generateQRDataUrl(qrText, 100);
+    const qrImage = qrDataUrl.startsWith("data:image/png")
+      ? await pdfDoc.embedPng(qrDataUrl)
+      : await pdfDoc.embedJpg(qrDataUrl);
+
+    const qrW = 100, qrH = 100;
+    const qrLabel = "To Verify";
+    const qrLabelSize = 10;
+
+    pages.forEach((p, i)=>{
+        p.drawText("نسخة أصلية للبنك", { x:20, y:20, size:12, font });
+        p.drawText("Hash:"+hash.slice(0,10)+"...", { x:20, y:35, size:8, font });
+
+        if(i===0){
+            const qrX = p.getWidth() - qrW - 20;
+            const qrY = p.getHeight() - qrH - 20;
+
+            p.drawImage(qrImage, { x: qrX, y: qrY, width: qrW, height: qrH });
+
+            const labelWidth = font.widthOfTextAtSize(qrLabel, qrLabelSize);
+            const labelX = qrX + (qrW - labelWidth) / 2;
+            const labelY = qrY - qrLabelSize - 4;
+            p.drawText(qrLabel, { x: labelX, y: labelY, size: qrLabelSize, font });
+        }
+    });
+
+    return await pdfDoc.save();
+}
+
+// رفع الملف
+async function uploadStamped(blob, originalName, hash, targetName){
+    const form = new FormData();
+    form.append("file", new File([blob], "original-"+originalName, {type:"application/pdf"}));
+    form.append("hash", hash);
+    if(targetName) form.append("targetName", targetName);
+
+    const res = await fetch((API_BASE||'')+"/upload", {method:"POST", body:form});
+    if(!res.ok){
+        let msg="";
+        try { const j=await res.json(); msg=j.message||""; } catch{}
+        throw new Error("فشل الرفع "+msg);
+    }
+    return await res.json();
+}
+
+// زر الإجراء
+document.getElementById("processBtn").addEventListener("click", async ()=>{
+    const input=document.getElementById("pdfFile");
+    if(!input.files.length){ alert("اختر ملف PDF"); return; }
+
+    const file=input.files[0];
+    const arrayBuffer=await file.arrayBuffer();
+    const hash=await generateHash(arrayBuffer);
+
+    const cfg=await getServerConfig();
+    const targetName="original-"+file.name;
+
+    let qrB2Url="";
+    if(cfg.b2Enabled && cfg.b2PublicBaseUrl && cfg.b2BucketName){
+        const safeBucket=encodeURIComponent(cfg.b2BucketName);
+        const safePath=targetName.split("/").map(encodeURIComponent).join("/");
+        qrB2Url = cfg.b2PublicBaseUrl.replace(/\/$/,"")+"/file/"+safeBucket+"/"+safePath;
+    }
+
+    // ختم النسخة الأصلية
+    const stampedBytes=await stampPDF(arrayBuffer, hash, qrB2Url||null);
+    const blob=new Blob([stampedBytes],{type:"application/pdf"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="original-"+file.name;
+    a.textContent="تحميل النسخة الأصلية للبنك";
+    log(a.textContent);
+    document.getElementById("log").appendChild(a);
+
+    // عرض QR مباشرة
+    renderQR((API_BASE||location.origin)+"/verify?hash="+hash);
+
+    // رفع للباك
+    log("⬆️ جاري رفع النسخة الأصلية...");
+    try{
+        const result=await uploadStamped(blob,file.name,hash,targetName);
+        log("✔️ تم الرفع: "+result.fileName);
+
+        if(result.fileUrl) renderQR(result.fileUrl);
+
+    } catch(e){
+        log("❌ "+e.message);
+    }
+
+    // نسخة العميل
+    const clientPdf=await PDFLib.PDFDocument.load(arrayBuffer);
+    const pages=clientPdf.getPages();
+    clientPdf.registerFontkit(fontkit);
+    const font=await clientPdf.embedFont(await getArabicFontBytes(), {subset:true});
+
+    const qrTextClient = qrB2Url || ((API_BASE||location.origin)+"/file?hash="+hash);
+    const qrDataUrlClient=await generateQRDataUrl(qrTextClient,90);
+
+    const qrImageClient = qrDataUrlClient.startsWith("data:image/png")
+      ? await clientPdf.embedPng(qrDataUrlClient)
+      : await clientPdf.embedJpg(qrDataUrlClient);
+
+    const qrW=90, qrH=90;
+    const qrLabelClient="To Verify";
+    const qrLabelSizeClient=9;
+
+    pages.forEach((p,i)=>{
+        p.drawText("نسخة للعميل – غير أصلية",{
+            x:50,y:50,size:20,font,
+            color:PDFLib.rgb(0.8,0.8,0.8),
+            rotate:PDFLib.degrees(45)
+        });
+
+        if(i===0){
+            const qrX=p.getWidth()-qrW-20;
+            const qrY=p.getHeight()-qrH-20;
+
+            p.drawImage(qrImageClient,{ x:qrX, y:qrY, width:qrW, height:qrH });
+
+            const labelWidth=font.widthOfTextAtSize(qrLabelClient, qrLabelSizeClient);
+            const labelX=qrX+(qrW-labelWidth)/2;
+            const labelY=qrY-qrLabelSizeClient-4;
+            p.drawText(qrLabelClient,{ x:labelX, y:labelY, size:qrLabelSizeClient, font });
+        }
+    });
+
+    const clientBytes=await clientPdf.save();
+    const blobClient=new Blob([clientBytes],{type:"application/pdf"});
+    const a2=document.createElement("a");
+    a2.href=URL.createObjectURL(blobClient);
+    a2.download="client-"+file.name;
+    a2.textContent="تحميل نسخة العميل";
+    document.getElementById("log").appendChild(document.createElement("br"));
+    document.getElementById("log").appendChild(a2);
+
+    log("✔️ تم توليد النسخ بنجاح.");
+});
+</script>
+
+</body>
+</html>

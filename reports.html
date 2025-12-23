@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>التقارير المختومة – Anti-Forgery Reports</title>
+
+<style>
+/* ===================== Root design (Apple style) ===================== */
+:root {
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --surface-soft: #fafafb;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+  --text: #1f2937;
+  --text-light: #6b7280;
+  --primary: #2563eb;
+  --primary-soft: #e0ecff;
+  --radius: 18px;
+  --radius-lg: 28px;
+  --shadow: 0 20px 50px rgba(0,0,0,0.05);
+  --shadow-card: 0 12px 38px rgba(15,23,42,0.06);
+  --shadow-soft: 0 8px 20px rgba(15,23,42,0.04);
+  --glass: rgba(255,255,255,0.6);
+}
+
+/* ===================== Body ===================== */
+body {
+  font-family: system-ui, -apple-system, "SF Pro Text", "Noto Kufi Arabic", sans-serif;
+  background:
+    radial-gradient(900px 600px at 95% -10%, #e4eaff 0%, transparent 55%),
+    radial-gradient(900px 700px at 10% 110%, #dff3ff 0%, transparent 45%),
+    linear-gradient(180deg, #f5f5f7 0%, #f0f4f8 100%);
+  margin: 0;
+  padding: 26px;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+/* ===================== Container ===================== */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* ===================== Header ===================== */
+.header {
+  margin-bottom: 26px;
+  padding: 18px 0;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+}
+
+.subtitle {
+  margin: 10px 0 18px;
+  color: var(--text-light);
+  font-size: 15px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Buttons */
+.btn {
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  transition: 0.18s ease;
+  border: 1px solid transparent;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn.primary {
+  background: #111827;
+  color: #fff;
+  box-shadow: 0 14px 34px rgba(17,24,39,0.25);
+}
+
+.btn.primary:hover { background: #0f172a; }
+
+.btn.secondary {
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 12px 30px rgba(37,99,235,0.22);
+}
+
+.btn.secondary:hover { background: #1e4fd3; }
+
+/* ===================== Card ===================== */
+.card {
+  background: var(--surface);
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 22px;
+}
+
+/* ===================== Search ===================== */
+.label {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+input[type=search] {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border-strong);
+  background: #f8fafc;
+  font-size: 14px;
+  transition: 0.2s ease;
+}
+
+input[type=search]:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(37,99,235,0.18);
+}
+
+.meta-row {
+  margin-top: 12px;
+  color: var(--text-light);
+  font-size: 15px;
+}
+
+/* ===================== Reports list ===================== */
+.reports-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Report card */
+.report-card {
+  padding: 20px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: #fff;
+  box-shadow: var(--shadow-soft);
+  transition: 0.18s;
+}
+
+.report-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.06);
+}
+
+.report-head {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.report-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.report-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: #1e40af;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Meta */
+.report-meta {
+  margin-top: 8px;
+  color: var(--text-light);
+  font-size: 14px;
+}
+
+.report-meta code {
+  background: #edf1f7;
+  padding: 4px 7px;
+  border-radius: 6px;
+  font-size: 13px;
+  direction: ltr;
+}
+
+/* ===================== Actions ===================== */
+.report-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mini-btn {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  background: #fff;
+  transition: 0.18s ease;
+}
+
+.mini-btn:hover {
+  background: #eef4ff;
+}
+
+.mini-btn.ghost {
+  border-color: #cbd5e1;
+  color: var(--text);
+}
+
+/* ===================== Mobile ===================== */
+@media (max-width:640px) {
+  .header h1 { font-size: 26px; }
+  .mini-btn, .btn { width: 100%; justify-content: center; }
+}
+</style>
+</head>
+
+
+<body>
+
+<div class="container">
+
+  <!-- ===================== Header ===================== -->
+  <div class="header">
+    <h1>التقارير المختومة</h1>
+    <p class="subtitle">استعرض جميع التقارير المختومة ويمكنك البحث برقم التقرير أو اسم الملف.</p>
+
+    <div class="header-actions">
+      <a class="btn primary" href="/">العودة للرئيسية</a>
+      <button class="btn secondary" id="refreshBtn">تحديث القائمة</button>
+    </div>
+  </div>
+
+  <!-- ===================== Search box ===================== -->
+  <div class="card">
+    <label class="label" for="searchInput">ابحث برقم التقرير أو الاسم</label>
+    <input type="search" id="searchInput" placeholder="مثال: 123456 أو اسم الملف...">
+    <div class="meta-row">العدد الكلي: <strong id="totalCount">0</strong></div>
+  </div>
+
+  <!-- ===================== Reports ===================== -->
+  <div class="card">
+    <div id="statusMessage" class="status"></div>
+    <div id="reportsList" class="reports-list"></div>
+  </div>
+
+</div>
+
+<!-- ===================== نفس السكربت، بدون أي تغيير ===================== -->
+<script>
+const API_BASE = (location && (location.protocol === 'file:' || location.origin === 'null')) ? 'http://localhost:3000' : '';
+const reportsListEl = document.getElementById('reportsList');
+const statusEl = document.getElementById('statusMessage');
+const totalCountEl = document.getElementById('totalCount');
+const searchInput = document.getElementById('searchInput');
+const refreshBtn = document.getElementById('refreshBtn');
+let allReports = [];
+
+function formatDate(value){
+  if (!value) return 'غير متوفر';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return 'غير متوفر';
+  try {
+    return new Intl.DateTimeFormat('ar', { dateStyle:'medium', timeStyle:'short' }).format(d);
+  } catch(_) {
+    return d.toLocaleString();
+  }
+}
+
+function render(list){
+  reportsListEl.innerHTML = '';
+  totalCountEl.textContent = list.length;
+
+  if(!list.length){
+    statusEl.textContent = 'لا توجد تقارير مطابقة.';
+    return;
+  }
+
+  statusEl.textContent = '';
+
+  list.forEach(report => {
+    const card = document.createElement('div');
+    card.className = 'report-card';
+
+    const viewUrl = report.fileUrl || ((API_BASE || '') + '/verify?hash=' + encodeURIComponent(report.hash));
+    const verifyUrl = (API_BASE || '') + '/verify?hash=' + encodeURIComponent(report.hash);
+
+    card.innerHTML = `
+      <div class="report-head">
+        <div class="report-name">${report.fileName || 'ملف بدون اسم'}</div>
+        <div class="report-badges">
+          <span class="badge">${report.status || 'أصلي'}</span>
+        </div>
+      </div>
+
+      <div class="report-meta">
+        <span class="label-text">رقم التقرير:</span>
+        <code>${report.hash}</code>
+      </div>
+
+      <div class="report-meta">
+        <span class="label-text">تاريخ الختم:</span> ${formatDate(report.createdAt)}
+      </div>
+
+      <div class="report-actions">
+        <a class="mini-btn" href="${viewUrl}" target="_blank">عرض التقرير</a>
+        <a class="mini-btn ghost" href="${verifyUrl}" target="_blank">رابط التحقق</a>
+      </div>
+    `;
+
+    reportsListEl.appendChild(card);
+  });
+}
+
+async function loadReports(){
+  statusEl.textContent = 'جاري تحميل التقارير...';
+  reportsListEl.innerHTML = '';
+
+  try {
+    const res = await fetch((API_BASE || '') + '/api/reports');
+    if(!res.ok) throw new Error();
+    const data = await res.json();
+    allReports = Array.isArray(data.reports) ? data.reports : [];
+    render(allReports);
+
+  } catch {
+    statusEl.textContent = 'تعذر تحميل التقارير، حاول لاحقاً.';
+    totalCountEl.textContent = '0';
+  }
+}
+
+function applyFilter(){
+  const term = searchInput.value.trim().toLowerCase();
+
+  if(!term){
+    render(allReports);
+    return;
+  }
+
+  const filtered = allReports.filter(r =>
+    (r.hash || '').toLowerCase().includes(term) ||
+    (r.fileName || '').toLowerCase().includes(term)
+  );
+
+  render(filtered);
+}
+
+searchInput.addEventListener('input', applyFilter);
+refreshBtn.addEventListener('click', loadReports);
+loadReports();
+</script>
+
+</body>
+</html>
