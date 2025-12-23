@@ -638,8 +638,9 @@ async function stampPDF(pdfBytes, hash, qrTextOverride){
 
     const qrW = 100, qrH = 100;
     const qrLabel = "To Verify";
-    const qrLabelSize = 10;
-    const labelPadding = 14; // vertical gap between QR and label in PDF points
+    const labelFontSize = 10;
+    const labelHeight = labelFontSize * 1.2;
+    const qrPadding = 18; // enforce >=16pt vertical gap between QR and text
 
     pages.forEach((p, i)=>{
         p.drawText("نسخة أصلية للبنك", { x:20, y:20, size:12, font });
@@ -651,10 +652,11 @@ async function stampPDF(pdfBytes, hash, qrTextOverride){
 
             p.drawImage(qrImage, { x: qrX, y: qrY, width: qrW, height: qrH });
 
-            const labelWidth = font.widthOfTextAtSize(qrLabel, qrLabelSize);
+            const labelWidth = font.widthOfTextAtSize(qrLabel, labelFontSize);
             const labelX = qrX + (qrW - labelWidth) / 2;
-            const labelY = qrY - labelPadding - qrLabelSize;
-            p.drawText(qrLabel, { x: labelX, y: labelY, size: qrLabelSize, font });
+            const labelBlockY = qrY - qrPadding - labelHeight;
+            const labelY = Math.max(qrPadding, labelBlockY);
+            p.drawText(qrLabel, { x: labelX, y: labelY, size: labelFontSize, font });
         }
     });
 
@@ -681,7 +683,7 @@ async function uploadStamped(blob, originalName, hash, targetName){
 document.getElementById("processBtn").addEventListener("click", async ()=>{
     try{
         const input=document.getElementById("pdfFile");
-        if(!input.files.length){ alert("???? ??? PDF"); return; }
+        if(!input.files.length){ alert("يرجى اختيار ملف PDF"); return; }
 
         const file=input.files[0];
         const arrayBuffer=await file.arrayBuffer();
@@ -703,7 +705,7 @@ document.getElementById("processBtn").addEventListener("click", async ()=>{
         const a=document.createElement("a");
         a.href=URL.createObjectURL(blob);
         a.download="original-"+file.name;
-        a.textContent="????? ?????? ??????? ?????";
+        a.textContent="تحميل النسخة الأصلية المختومة";
         log(a.textContent);
         document.getElementById("log").appendChild(a);
 
@@ -711,15 +713,15 @@ document.getElementById("processBtn").addEventListener("click", async ()=>{
         renderQR((API_BASE||location.origin)+"/verify?hash="+hash);
 
         // ??? ?????
-        log("?? ???? ??? ?????? ???????...");
+        log("جاري رفع النسخة المختومة...");
         try{
             const result=await uploadStamped(blob,file.name,hash,targetName);
-            log("?? ?? ?????: "+result.fileName);
+            log("تم الرفع بنجاح: "+result.fileName);
 
             if(result.fileUrl) renderQR(result.fileUrl);
 
         } catch(e){
-            log("? "+e.message);
+            log("خطأ "+e.message);
         }
 
         // ???? ??????
@@ -738,10 +740,11 @@ document.getElementById("processBtn").addEventListener("click", async ()=>{
         const qrW=90, qrH=90;
         const qrLabelClient="To Verify";
         const qrLabelSizeClient=9;
-        const labelPaddingClient=14;
+        const qrPaddingClient=18; // enforce >=16pt gap
+        const labelHeightClient=qrLabelSizeClient*1.2;
 
         pages.forEach((p,i)=>{
-            p.drawText("???? ?????? ? ??? ?????",{
+            p.drawText("نسخة العميل", {
                 x:50,y:50,size:20,font,
                 color:PDFLib.rgb(0.8,0.8,0.8),
                 rotate:PDFLib.degrees(45)
@@ -755,7 +758,8 @@ document.getElementById("processBtn").addEventListener("click", async ()=>{
 
                 const labelWidth=font.widthOfTextAtSize(qrLabelClient, qrLabelSizeClient);
                 const labelX=qrX+(qrW-labelWidth)/2;
-                const labelY=qrY-labelPaddingClient-qrLabelSizeClient;
+                const labelBlockY=qrY-qrPaddingClient-labelHeightClient;
+                const labelY=Math.max(qrPaddingClient, labelBlockY);
                 p.drawText(qrLabelClient,{ x:labelX, y:labelY, size:qrLabelSizeClient, font });
             }
         });
@@ -765,15 +769,17 @@ document.getElementById("processBtn").addEventListener("click", async ()=>{
         const a2=document.createElement("a");
         a2.href=URL.createObjectURL(blobClient);
         a2.download="client-"+file.name;
-        a2.textContent="????? ???? ??????";
+        a2.textContent = "تحميل نسخة العميل";
+
         document.getElementById("log").appendChild(document.createElement("br"));
         document.getElementById("log").appendChild(a2);
 
-        log("?? ?? ????? ??????? ?????.");
+        log("تم إنشاء جميع النسخ بنجاح.");
+
     } catch(err){
         console.error(err);
-        log("??? ??? ????? ???????: "+(err && err.message ? err.message : err));
-        alert("???? ????? ???????? ???? ?? ??????? ????????? ?? ??? ????????.");
+       log("حدث خطأ أثناء معالجة الملف: " + (err?.message || err));
+       alert("تعذر إتمام العملية. يرجى التأكد من أن الملف PDF صالح ثم المحاولة مرة أخرى.");
     }
 });
 </script>
