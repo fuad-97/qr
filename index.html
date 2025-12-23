@@ -639,7 +639,6 @@ async function stampPDF(pdfBytes, hash, qrTextOverride){
     const qrW = 100, qrH = 100;
     const qrLabel = "To Verify";
     const labelFontSize = 10;
-    const labelHeight = labelFontSize * 1.2;
     const qrPadding = 18; // enforce >=16pt vertical gap between QR and text
 
     pages.forEach((p, i)=>{
@@ -654,8 +653,8 @@ async function stampPDF(pdfBytes, hash, qrTextOverride){
 
             const labelWidth = font.widthOfTextAtSize(qrLabel, labelFontSize);
             const labelX = qrX + (qrW - labelWidth) / 2;
-            const labelBlockY = qrY - qrPadding - labelHeight;
-            const labelY = Math.max(qrPadding, labelBlockY);
+            const labelBaseline = qrY - qrPadding - labelFontSize;
+            const labelY = Math.max(labelFontSize, labelBaseline);
             p.drawText(qrLabel, { x: labelX, y: labelY, size: labelFontSize, font });
         }
     });
@@ -741,7 +740,6 @@ document.getElementById("processBtn").addEventListener("click", async ()=>{
         const qrLabelClient="To Verify";
         const qrLabelSizeClient=9;
         const qrPaddingClient=18; // enforce >=16pt gap
-        const labelHeightClient=qrLabelSizeClient*1.2;
 
         pages.forEach((p,i)=>{
             p.drawText("نسخة العميل", {
@@ -758,8 +756,8 @@ document.getElementById("processBtn").addEventListener("click", async ()=>{
 
                 const labelWidth=font.widthOfTextAtSize(qrLabelClient, qrLabelSizeClient);
                 const labelX=qrX+(qrW-labelWidth)/2;
-                const labelBlockY=qrY-qrPaddingClient-labelHeightClient;
-                const labelY=Math.max(qrPaddingClient, labelBlockY);
+                const labelBaseline=qrY-qrPaddingClient-qrLabelSizeClient;
+                const labelY=Math.max(qrLabelSizeClient, labelBaseline);
                 p.drawText(qrLabelClient,{ x:labelX, y:labelY, size:qrLabelSizeClient, font });
             }
         });
