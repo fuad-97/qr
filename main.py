@@ -71,7 +71,7 @@ def _overlay_qr_on_pdf(input_pdf: Path, output_pdf: Path, qr_png_path: Path, qr_
             for page in document:
                 rect = _calculate_qr_rect(page.rect, qr_size_pt, qr_size_pt)
                 page.insert_image(rect, filename=str(qr_png_path), overlay=True, keep_proportion=True)
-                label_margin = 6.0
+                label_margin = 10.0
                 label_height = 12.0
                 label_rect = fitz.Rect(
                     rect.x0,

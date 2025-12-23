@@ -523,7 +523,7 @@ function renderQR(text){
 
     const label = document.createElement('div');
     label.textContent = "To Verify";
-    label.style.marginTop = "8px";
+    label.style.marginTop = "14px";
     label.style.fontSize = "12px";
     label.style.color = "#4b5563";
     label.style.textAlign = "center";
@@ -532,29 +532,44 @@ function renderQR(text){
 
 // صورة QR داخل PDF
 async function generateQRDataUrl(text, size){
+    if (typeof QRCode !== 'undefined') {
+        try {
+            return await new Promise((resolve, reject)=>{
+                const holder = document.createElement('div');
+                holder.style.position = "fixed";
+                holder.style.left = "-9999px";
+                document.body.appendChild(holder);
+
+                new QRCode(holder, { text, width:size, height:size });
+
+                setTimeout(()=>{
+                    try {
+                        const img = holder.querySelector("img");
+                        const canvas = holder.querySelector("canvas");
+                        let dataUrl = img?.src || canvas?.toDataURL("image/png");
+                        document.body.removeChild(holder);
+                        if(!dataUrl) return reject(new Error("QR empty"));
+                        resolve(dataUrl);
+                    } catch(e){
+                        document.body.removeChild(holder);
+                        reject(e);
+                    }
+                },0);
+            });
+        } catch(err){
+            console.warn("QRCode local generation failed, falling back", err);
+        }
+    }
+
+    const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}`;
+    const res = await fetch(apiUrl);
+    if(!res.ok) throw new Error("تعذر توليد QR (api)");
+    const blob = await res.blob();
     return await new Promise((resolve, reject)=>{
-        if (typeof QRCode === 'undefined') return reject();
-
-        const holder = document.createElement('div');
-        holder.style.position = "fixed";
-        holder.style.left = "-9999px";
-        document.body.appendChild(holder);
-
-        new QRCode(holder, { text, width:size, height:size });
-
-        setTimeout(()=>{
-            try {
-                const img = holder.querySelector("img");
-                const canvas = holder.querySelector("canvas");
-                let dataUrl = img?.src || canvas?.toDataURL("image/png");
-                document.body.removeChild(holder);
-                if(!dataUrl) return reject();
-                resolve(dataUrl);
-            } catch(e){
-                document.body.removeChild(holder);
-                reject(e);
-            }
-        },0);
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
     });
 }
 
@@ -589,7 +604,7 @@ async function stampPDF(pdfBytes, hash, qrTextOverride){
 
             const labelWidth = font.widthOfTextAtSize(qrLabel, qrLabelSize);
             const labelX = qrX + (qrW - labelWidth) / 2;
-            const labelY = qrY - qrLabelSize - 4;
+            const labelY = qrY - qrLabelSize - 14; // place clearly below the QR
             p.drawText(qrLabel, { x: labelX, y: labelY, size: qrLabelSize, font });
         }
     });
@@ -615,95 +630,101 @@ async function uploadStamped(blob, originalName, hash, targetName){
 
 // زر الإجراء
 document.getElementById("processBtn").addEventListener("click", async ()=>{
-    const input=document.getElementById("pdfFile");
-    if(!input.files.length){ alert("اختر ملف PDF"); return; }
-
-    const file=input.files[0];
-    const arrayBuffer=await file.arrayBuffer();
-    const hash=await generateHash(arrayBuffer);
-
-    const cfg=await getServerConfig();
-    const targetName="original-"+file.name;
-
-    let qrB2Url="";
-    if(cfg.b2Enabled && cfg.b2PublicBaseUrl && cfg.b2BucketName){
-        const safeBucket=encodeURIComponent(cfg.b2BucketName);
-        const safePath=targetName.split("/").map(encodeURIComponent).join("/");
-        qrB2Url = cfg.b2PublicBaseUrl.replace(/\/$/,"")+"/file/"+safeBucket+"/"+safePath;
-    }
-
-    // ختم النسخة الأصلية
-    const stampedBytes=await stampPDF(arrayBuffer, hash, qrB2Url||null);
-    const blob=new Blob([stampedBytes],{type:"application/pdf"});
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(blob);
-    a.download="original-"+file.name;
-    a.textContent="تحميل النسخة الأصلية للبنك";
-    log(a.textContent);
-    document.getElementById("log").appendChild(a);
-
-    // عرض QR مباشرة
-    renderQR((API_BASE||location.origin)+"/verify?hash="+hash);
-
-    // رفع للباك
-    log("⬆️ جاري رفع النسخة الأصلية...");
     try{
-        const result=await uploadStamped(blob,file.name,hash,targetName);
-        log("✔️ تم الرفع: "+result.fileName);
+        const input=document.getElementById("pdfFile");
+        if(!input.files.length){ alert("???? ??? PDF"); return; }
 
-        if(result.fileUrl) renderQR(result.fileUrl);
+        const file=input.files[0];
+        const arrayBuffer=await file.arrayBuffer();
+        const hash=await generateHash(arrayBuffer);
 
-    } catch(e){
-        log("❌ "+e.message);
-    }
+        const cfg=await getServerConfig();
+        const targetName="original-"+file.name;
 
-    // نسخة العميل
-    const clientPdf=await PDFLib.PDFDocument.load(arrayBuffer);
-    const pages=clientPdf.getPages();
-    clientPdf.registerFontkit(fontkit);
-    const font=await clientPdf.embedFont(await getArabicFontBytes(), {subset:true});
+        let qrB2Url="";
+        if(cfg.b2Enabled && cfg.b2PublicBaseUrl && cfg.b2BucketName){
+            const safeBucket=encodeURIComponent(cfg.b2BucketName);
+            const safePath=targetName.split("/").map(encodeURIComponent).join("/");
+            qrB2Url = cfg.b2PublicBaseUrl.replace(/\/$/,"")+"/file/"+safeBucket+"/"+safePath;
+        }
 
-    const qrTextClient = qrB2Url || ((API_BASE||location.origin)+"/file?hash="+hash);
-    const qrDataUrlClient=await generateQRDataUrl(qrTextClient,90);
+        // ??? ?????? ???????
+        const stampedBytes=await stampPDF(arrayBuffer, hash, qrB2Url||null);
+        const blob=new Blob([stampedBytes],{type:"application/pdf"});
+        const a=document.createElement("a");
+        a.href=URL.createObjectURL(blob);
+        a.download="original-"+file.name;
+        a.textContent="????? ?????? ??????? ?????";
+        log(a.textContent);
+        document.getElementById("log").appendChild(a);
 
-    const qrImageClient = qrDataUrlClient.startsWith("data:image/png")
-      ? await clientPdf.embedPng(qrDataUrlClient)
-      : await clientPdf.embedJpg(qrDataUrlClient);
+        // ??? QR ??????
+        renderQR((API_BASE||location.origin)+"/verify?hash="+hash);
 
-    const qrW=90, qrH=90;
-    const qrLabelClient="To Verify";
-    const qrLabelSizeClient=9;
+        // ??? ?????
+        log("?? ???? ??? ?????? ???????...");
+        try{
+            const result=await uploadStamped(blob,file.name,hash,targetName);
+            log("?? ?? ?????: "+result.fileName);
 
-    pages.forEach((p,i)=>{
-        p.drawText("نسخة للعميل – غير أصلية",{
-            x:50,y:50,size:20,font,
-            color:PDFLib.rgb(0.8,0.8,0.8),
-            rotate:PDFLib.degrees(45)
-        });
+            if(result.fileUrl) renderQR(result.fileUrl);
 
-        if(i===0){
-            const qrX=p.getWidth()-qrW-20;
-            const qrY=p.getHeight()-qrH-20;
+        } catch(e){
+            log("? "+e.message);
+        }
 
-            p.drawImage(qrImageClient,{ x:qrX, y:qrY, width:qrW, height:qrH });
+        // ???? ??????
+        const clientPdf=await PDFLib.PDFDocument.load(arrayBuffer);
+        const pages=clientPdf.getPages();
+        clientPdf.registerFontkit(fontkit);
+        const font=await clientPdf.embedFont(await getArabicFontBytes(), {subset:true});
+
+        const qrTextClient = qrB2Url || ((API_BASE||location.origin)+"/file?hash="+hash);
+        const qrDataUrlClient=await generateQRDataUrl(qrTextClient,90);
+
+        const qrImageClient = qrDataUrlClient.startsWith("data:image/png")
+          ? await clientPdf.embedPng(qrDataUrlClient)
+          : await clientPdf.embedJpg(qrDataUrlClient);
+
+        const qrW=90, qrH=90;
+        const qrLabelClient="To Verify";
+        const qrLabelSizeClient=9;
+
+        pages.forEach((p,i)=>{
+            p.drawText("???? ?????? ? ??? ?????",{
+                x:50,y:50,size:20,font,
+                color:PDFLib.rgb(0.8,0.8,0.8),
+                rotate:PDFLib.degrees(45)
+            });
+
+            if(i===0){
+                const qrX=p.getWidth()-qrW-20;
+                const qrY=p.getHeight()-qrH-20;
+
+                p.drawImage(qrImageClient,{ x:qrX, y:qrY, width:qrW, height:qrH });
 
             const labelWidth=font.widthOfTextAtSize(qrLabelClient, qrLabelSizeClient);
             const labelX=qrX+(qrW-labelWidth)/2;
-            const labelY=qrY-qrLabelSizeClient-4;
+            const labelY=qrY-qrLabelSizeClient-14; // place clearly below the QR
             p.drawText(qrLabelClient,{ x:labelX, y:labelY, size:qrLabelSizeClient, font });
         }
     });
 
-    const clientBytes=await clientPdf.save();
-    const blobClient=new Blob([clientBytes],{type:"application/pdf"});
-    const a2=document.createElement("a");
-    a2.href=URL.createObjectURL(blobClient);
-    a2.download="client-"+file.name;
-    a2.textContent="تحميل نسخة العميل";
-    document.getElementById("log").appendChild(document.createElement("br"));
-    document.getElementById("log").appendChild(a2);
+        const clientBytes=await clientPdf.save();
+        const blobClient=new Blob([clientBytes],{type:"application/pdf"});
+        const a2=document.createElement("a");
+        a2.href=URL.createObjectURL(blobClient);
+        a2.download="client-"+file.name;
+        a2.textContent="????? ???? ??????";
+        document.getElementById("log").appendChild(document.createElement("br"));
+        document.getElementById("log").appendChild(a2);
 
-    log("✔️ تم توليد النسخ بنجاح.");
+        log("?? ?? ????? ??????? ?????.");
+    } catch(err){
+        console.error(err);
+        log("??? ??? ????? ???????: "+(err && err.message ? err.message : err));
+        alert("???? ????? ???????? ???? ?? ??????? ????????? ?? ??? ????????.");
+    }
 });
 </script>
 
