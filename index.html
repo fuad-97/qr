@@ -509,16 +509,25 @@ async function generateHash(fileArrayBuffer){
 
 // توليد QR في الواجهة
 function renderQR(text){
-    $('#qrBox').innerHTML='';
+    const box = $('#qrBox');
+    box.innerHTML='';
     if (typeof QRCode !== 'undefined') {
-        new QRCode($('#qrBox'), { text, width:150, height:150 });
-        return;
+        new QRCode(box, { text, width:150, height:150 });
+    } else {
+        const img = document.createElement('img');
+        img.width = 150;
+        img.height = 150;
+        img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(text);
+        box.appendChild(img);
     }
-    const img = document.createElement('img');
-    img.width = 150;
-    img.height = 150;
-    img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(text);
-    $('#qrBox').appendChild(img);
+
+    const label = document.createElement('div');
+    label.textContent = "To Verify";
+    label.style.marginTop = "8px";
+    label.style.fontSize = "12px";
+    label.style.color = "#4b5563";
+    label.style.textAlign = "center";
+    box.appendChild(label);
 }
 
 // صورة QR داخل PDF
