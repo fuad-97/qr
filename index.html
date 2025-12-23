@@ -324,9 +324,41 @@ input[type=file]::file-selector-button {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 16px;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.9),
     0 16px 36px rgba(15,23,42,0.08);
+}
+
+.qr-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  text-align: center;
+  width: 100%;
+  direction: inherit;
+}
+
+.qr-stack.top {
+  flex-direction: column-reverse;
+}
+
+.qr-figure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-caption {
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.qr-placeholder {
+  font-size: 13px;
+  color: #9ca3af;
 }
 
 /* Responsive */
@@ -437,7 +469,10 @@ if (typeof QRCode === 'undefined') {
         <div class="qr-wrapper">
           <div class="qr-label">سيظهر رمز QR هنا بعد رفع ومعالجة التقرير.</div>
           <div id="qrBox">
-            <span style="font-size:13px; color:#9ca3af;">لم يتم توليد رمز بعد.</span>
+            <div class="qr-stack bottom">
+              <div class="qr-figure qr-placeholder">لم يتم توليد رمز بعد.</div>
+              <div class="qr-caption">To Verify</div>
+            </div>
           </div>
         </div>
       </section>
@@ -508,26 +543,39 @@ async function generateHash(fileArrayBuffer){
 }
 
 // توليد QR في الواجهة
-function renderQR(text){
+function renderQR(text, positionClass = 'bottom'){
     const box = $('#qrBox');
     box.innerHTML='';
+
+    const stack = document.createElement('div');
+    stack.className = `qr-stack ${positionClass === 'top' ? 'top' : 'bottom'}`;
+
+    const figure = document.createElement('div');
+    figure.className = 'qr-figure';
+
     if (typeof QRCode !== 'undefined') {
-        new QRCode(box, { text, width:150, height:150 });
+        new QRCode(figure, { text, width:150, height:150 });
     } else {
         const img = document.createElement('img');
         img.width = 150;
         img.height = 150;
         img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(text);
-        box.appendChild(img);
+        figure.appendChild(img);
     }
 
     const label = document.createElement('div');
+    label.className = 'qr-caption';
     label.textContent = "To Verify";
-    label.style.marginTop = "14px";
-    label.style.fontSize = "12px";
-    label.style.color = "#4b5563";
-    label.style.textAlign = "center";
-    box.appendChild(label);
+
+    if (stack.classList.contains('top')) {
+        stack.appendChild(label);
+        stack.appendChild(figure);
+    } else {
+        stack.appendChild(figure);
+        stack.appendChild(label);
+    }
+
+    box.appendChild(stack);
 }
 
 // صورة QR داخل PDF
