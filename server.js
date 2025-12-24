@@ -7,6 +7,7 @@ try { require('dotenv').config(); } catch(_) {}
 const B2 = require('backblaze-b2');
 const app = express();
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+const reportsPassword = process.env.REPORTS_PASSWORD || '944221';
 
 // Basic CORS for cross-origin requests
 app.use((req, res, next) => {
@@ -33,6 +34,25 @@ function multerErrorHandler(err, req, res, next){
   next(err);
 }
 app.use(multerErrorHandler);
+
+// Simple Basic Auth for /reports if password is configured
+function requireReportsPassword(req, res, next){
+  if (!reportsPassword) {
+    return res.status(503).send('Reports password not configured. Set REPORTS_PASSWORD.');
+  }
+  const auth = req.headers.authorization;
+  if (!auth || !auth.toLowerCase().startsWith('basic ')) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Reports"');
+    return res.status(401).send('Authentication required.');
+  }
+  try {
+    const decoded = Buffer.from(auth.split(' ')[1] || '', 'base64').toString('utf8');
+    const [, pass = ''] = decoded.split(':');
+    if (pass === reportsPassword) return next();
+  } catch (_) {}
+  res.setHeader('WWW-Authenticate', 'Basic realm="Reports"');
+  return res.status(401).send('Invalid credentials.');
+}
 
 // إعداد Backblaze B2
 // Render envs expected: B2_ACCOUNT_ID, B2_APPLICATION_KEY, B2_BUCKET_ID, B2_BUCKET_NAME
@@ -178,6 +198,7 @@ const reports = {
 };
 
 // صفحة عرض جميع التقارير المختومة
+app.use('/reports', requireReportsPassword);
 app.get('/reports', (req, res) => {
   res.sendFile(path.join(__dirname, 'reports.html'));
 });
