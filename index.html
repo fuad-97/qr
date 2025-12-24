@@ -354,6 +354,11 @@ input[type=file]::file-selector-button {
 .qr-caption {
   font-size: 12px;
   color: #4b5563;
+  direction: ltr;
+  unicode-bidi: isolate;
+  white-space: nowrap;
+  text-align: center;
+  font-family: "Helvetica Neue", Arial, sans-serif;
 }
 
 .qr-placeholder {
@@ -660,6 +665,7 @@ async function stampPDF(pdfBytes, hash, qrTextOverride){
     const pages = pdfDoc.getPages();
     pdfDoc.registerFontkit(fontkit);
     const font = await pdfDoc.embedFont(await getArabicFontBytes(), { subset:true });
+    const englishFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
 
     let qrText = qrTextOverride ||
       ((API_BASE || window.location.origin) + '/file?hash=' + hash);
@@ -688,7 +694,7 @@ async function stampPDF(pdfBytes, hash, qrTextOverride){
             const labelX = qrX + (qrW - labelWidth) / 2;
             const labelBaseline = qrY - qrPadding - labelFontSize;
             const labelY = Math.max(labelFontSize, labelBaseline);
-            p.drawText(qrLabel, { x: labelX, y: labelY, size: labelFontSize, font });
+            p.drawText(qrLabel, { x: labelX, y: labelY, size: labelFontSize, font: englishFont });
         }
     });
 
@@ -761,6 +767,7 @@ document.getElementById("processBtn").addEventListener("click", async ()=>{
         const pages=clientPdf.getPages();
         clientPdf.registerFontkit(fontkit);
         const font=await clientPdf.embedFont(await getArabicFontBytes(), {subset:true});
+        const englishFont=await clientPdf.embedFont(PDFLib.StandardFonts.Helvetica);
 
         const qrTextClient = qrB2Url || ((API_BASE||location.origin)+"/file?hash="+hash);
         const qrDataUrlClient=await generateQRDataUrl(qrTextClient, QR_SOURCE_SIZE);
@@ -787,11 +794,11 @@ document.getElementById("processBtn").addEventListener("click", async ()=>{
 
                 p.drawImage(qrImageClient,{ x:qrX, y:qrY, width:qrW, height:qrH });
 
-                const labelWidth=font.widthOfTextAtSize(qrLabelClient, qrLabelSizeClient);
+                const labelWidth=englishFont.widthOfTextAtSize(qrLabelClient, qrLabelSizeClient);
                 const labelX=qrX+(qrW-labelWidth)/2;
                 const labelBaseline=qrY-qrPaddingClient-qrLabelSizeClient;
                 const labelY=Math.max(qrLabelSizeClient, labelBaseline);
-                p.drawText(qrLabelClient,{ x:labelX, y:labelY, size:qrLabelSizeClient, font });
+                p.drawText(qrLabelClient,{ x:labelX, y:labelY, size:qrLabelSizeClient, font: englishFont });
             }
         });
 
