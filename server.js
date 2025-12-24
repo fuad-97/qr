@@ -2,12 +2,14 @@ const express = require('express');
 const multer = require('multer');
 const crypto = require('crypto');
 const path = require('path');
+const fs = require('fs');
 // Load environment variables from .env if present
 try { require('dotenv').config(); } catch(_) {}
 const B2 = require('backblaze-b2');
 const app = express();
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 const reportsPassword = process.env.REPORTS_PASSWORD || '944221';
+const REPORTS_STORE = path.join(__dirname, 'reports-store.json');
 
 // Basic CORS for cross-origin requests
 app.use((req, res, next) => {
@@ -193,9 +195,27 @@ async function ensureB2Ready(){
 }
 
 // قاعدة بيانات مؤقتة: ربط hash باسم الملف المرفوع
-const reports = {
-  "123abc": { fileName: "report1.pdf", status: "أصلي", createdAt: new Date().toISOString() }
-};
+function loadReports(){
+  try {
+    const raw = fs.readFileSync(REPORTS_STORE, "utf8");
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") return parsed;
+  } catch (_) {}
+  return {
+    "123abc": { fileName: "report1.pdf", status: "????�?�?", createdAt: new Date().toISOString() }
+  };
+}
+
+function saveReports(data){
+  try {
+    fs.writeFileSync(REPORTS_STORE, JSON.stringify(data, null, 2), "utf8");
+  } catch (err) {
+    console.error("Failed to persist reports:", err && err.message ? err.message : err);
+  }
+}
+
+const reports = loadReports();
+saveReports(reports);
 
 // صفحة عرض جميع التقارير المختومة
 app.use('/reports', requireReportsPassword);
@@ -270,6 +290,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         mimeType,
         createdAt: new Date().toISOString()
       };
+      saveReports(reports);
 
       return res.json({ ok: true, hash, fileName: targetName, fileUrl, mimeType, size: req.file.size || undefined });
     } catch (e) {
@@ -330,3 +351,7 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(port, () => console.log(`Server running at http://localhost:${port}`));
+
+
+
+
